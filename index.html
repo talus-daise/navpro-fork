@@ -1,0 +1,1930 @@
+<html lang="en">
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="UTF-8">
+    <title>Nav Protocol</title>
+    <link rel="stylesheet" href="Nav%20Protocol_files/style.css">
+</head>
+
+<body id="main-body">
+    <div id="explosion-layer"></div>
+    <div id="meltdown-text">MELTDOWN</div>
+    <div id="clang-text">CLANG!</div>
+
+    <div id="ui-wrapper">
+        <!-- <h2 id="title-header">ENGLISH ESCAPE</h2> -->
+        <div id="timer-box">TIME: <span id="clock">12:00</span></div>
+        <div id="status">NORTH</div>
+
+        <div id="game-container" class="walk-anim" style="border-color: rgb(68, 68, 68);">
+            <div id="escape-text">SURFACE REACHED</div>
+
+            <div id="tactical-overlay" style="display: none;">
+                <h1 id="overlay-title">FINISHED</h1>
+                <p id="overlay-msg"></p>
+                <button id="overlay-btn" onclick="closeOverlay()">NEXT MAP</button>
+            </div>
+            <div id="persistent-key-hud" style="display: flex; box-shadow: none;">
+                <div class="hud-key-wrapper" style="opacity: 0.5;">👺<div class="hud-x-mark"
+                        style="transform: translateY(-50%) rotate(45deg);"></div>
+                    <div class="hud-x-mark" style="transform: translateY(-50%) rotate(-45deg);"></div>
+                </div>
+            </div>
+            <div id="door-left" class="door">
+                <div class="handle"></div>
+            </div>
+            <div id="door-right" class="door">
+                <div class="handle"></div>
+            </div>
+            <div id="floor"></div>
+            <div id="left-wall" class="wall" style="opacity: 1;"></div>
+            <div id="right-wall" class="wall" style="opacity: 1;">
+                <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
+            </div>
+            <div id="front-wall" class="wall" onclick="clickWall()" style="display: flex;">
+                <div style="position: relative; display: inline-block;"><span class="symbol-flipper">🐘</span></div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="nav-btn" onclick="turnLeft()">↺ L</button>
+            <button id="main-btn" onclick="initGame()">⮝</button>
+            <button class="nav-btn" onclick="turnRight()">R ↻</button>
+        </div>
+
+        <div id="admin-box" class="admin-panel">
+            <strong>MAPS:</strong>
+            <span id="map-button-container"><button class="map-btn"
+                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 1</button><button class="map-btn"
+                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 2</button><button class="map-btn"
+                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 3</button><button class="map-btn"
+                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 4</button><button class="map-btn"
+                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 SECRET</button></span>
+        </div>
+    </div>
+
+    <canvas id="mapCanvas" style="display:none;"></canvas>
+    <div id="disco-overlay"></div>
+    <script src="Nav%20Protocol_files/script.js"></script>
+
+
+
+    <style>
+        /* --- GLOBAL & WRAPPER --- */
+        body {
+            background-color: #050505;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            justify-content: center;
+        }
+
+        #title-header,
+        #status,
+        .admin-panel strong,
+        button {
+            transition: transform 4s, opacity 3s, color 3s;
+        }
+
+        #status {
+            color: yellow;
+            margin: 5px;
+            transition: transform 4s, opacity 3s;
+        }
+
+        /* --- THE HUD BOX (Initial State) --- */
+        #timer-box {
+            font-size: 38px;
+            font-weight: bold;
+            margin: 5px;
+            padding: 5px 20px;
+            border: 3px solid #0f0;
+            /* Default Green */
+            background: rgba(0, 20, 0, 0.9);
+            z-index: 999;
+        }
+
+        /* Example: if you add a 'dimmed' class to the UI when the game ends */
+        .dimmed .admin-panel strong {
+            opacity: 0.3;
+            color: #004400;
+            /* Dims the green text to a dark muddy green */
+        }
+
+        /* If you are using the epilogue-theme we discussed earlier: */
+        .epilogue-theme .admin-panel strong {
+            color: #ffffff !important;
+            opacity: 0.5;
+        }
+
+        .critical-alert {
+            color: #ff0000 !important;
+            border-color: #ff0000 !important;
+            background: rgba(40, 0, 0, 0.9) !important;
+            /* Dark red background */
+            animation: alert-flicker 0.2s infinite;
+            /* Flicker effect */
+        }
+
+        /* Keep the red color even during the shatter animation */
+        .shatter.critical-alert {
+            color: #ff0000 !important;
+            border-color: #ff0000 !important;
+            background: rgba(40, 0, 0, 0.9) !important;
+            opacity: 0;
+            /* Gradually fades out as it falls */
+        }
+
+        /* Ensure this is in your CSS file */
+        .shatter .admin-panel strong,
+        .dimmed .admin-panel strong {
+            opacity: 0.3 !important;
+            color: #004400 !important;
+            transition: opacity 3s, color 3s;
+            /* This makes it fade out smoothly */
+        }
+
+        @keyframes alert-flicker {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Default landmark size */
+        .landmark-text {
+            font-size: 40px;
+            transition: transform 0.2s;
+        }
+
+        /* Standard landmark size */
+        #front-wall,
+        #left-wall,
+        #right-wall {
+            font-size: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Container to handle the North-facing flip separately */
+        .symbol-flipper {
+            display: inline-block;
+            transition: transform 0.2s;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Big symbols - simply increases size */
+        .large-landmark {
+            font-size: 100px !important;
+        }
+
+        /* --- BLAST DOORS --- */
+        .door {
+            position: absolute;
+            top: 0;
+            width: 0%;
+            height: 100%;
+            background: #1a1a1a;
+            z-index: 500;
+            overflow: hidden;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            background-image: linear-gradient(45deg, #222 25%, transparent 25%), linear-gradient(-45deg, #222 25%, transparent 25%);
+            background-size: 30px 30px;
+        }
+
+        #door-left {
+            left: 0;
+            border-right: 6px solid #555;
+            justify-content: flex-end;
+            box-shadow: inset -10px 0 20px #000;
+        }
+
+        #door-right {
+            right: 0;
+            border-left: 6px solid #555;
+            justify-content: flex-start;
+            box-shadow: inset 10px 0 20px #000;
+        }
+
+        .handle {
+            width: 25px;
+            height: 120px;
+            background: #333;
+            border: 3px solid #444;
+            margin: 0 15px;
+            border-radius: 4px;
+        }
+
+        .doors-shut #door-left {
+            animation: slamL 0.7s ease-in forwards;
+        }
+
+        .doors-shut #door-right {
+            animation: slamR 0.7s ease-in forwards;
+        }
+
+        @keyframes slamL {
+            0% {
+                width: 0%;
+            }
+
+            45% {
+                width: 50%;
+            }
+
+            75% {
+                width: 35%;
+            }
+
+            100% {
+                width: 50%;
+            }
+        }
+
+        @keyframes slamR {
+            0% {
+                width: 0%;
+            }
+
+            45% {
+                width: 50%;
+            }
+
+            75% {
+                width: 35%;
+            }
+
+            100% {
+                width: 50%;
+            }
+        }
+
+        #clang-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) skewX(-10deg);
+            font-family: 'Impact', sans-serif;
+            font-size: 60px;
+            color: #fff;
+            font-weight: bold;
+            z-index: 600;
+            opacity: 0;
+            pointer-events: none;
+            text-shadow: 5px 5px 0px #555, 0 0 30px #f00;
+        }
+
+        .doors-shut #clang-text {
+            animation: clangAnim 0.7s ease-out;
+        }
+
+        @keyframes clangAnim {
+
+            0%,
+            44% {
+                opacity: 0;
+                scale: 0.5;
+            }
+
+            45% {
+                opacity: 1;
+                scale: 1.5;
+                color: #f00;
+            }
+
+            100% {
+                opacity: 0;
+                scale: 1;
+            }
+        }
+
+        /* --- GAME VIEWPORT --- */
+        #game-container {
+            position: relative;
+            width: 550px;
+            height: 320px;
+            border: 4px solid #444;
+            background: #000;
+            perspective: 400px;
+            overflow: hidden;
+        }
+
+        .walk-anim {
+            animation: headBob 0.25s ease-in-out;
+        }
+
+        @keyframes headBob {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.04) translateY(-8px);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* --- WORLD ELEMENTS --- */
+        #floor {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(#004400 2px, transparent 2px), linear-gradient(90deg, #004400 2px, transparent 2px);
+            background-size: 80px 80px;
+            transform: rotateX(80deg);
+            transform-origin: bottom;
+            z-index: 1;
+        }
+
+        /* --- WORLD ELEMENTS --- */
+        .wall {
+            position: absolute;
+            background: #002200;
+            border: 2px solid #0f0;
+            box-sizing: border-box;
+            transition: opacity 0.1s;
+
+            /* Fixed Layout: Stacks EXIT on top of KEYS */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 60px;
+            /* Large symbol size */
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        #front-wall {
+            left: 0%;
+            top: 18%;
+            width: 100%;
+            height: 64%;
+            z-index: 1;
+            font-size: 80px;
+            /* Front symbols are even larger */
+            font-weight: bold;
+
+            /* Ensures column stacking for the Exit Door */
+            display: flex;
+            flex-direction: column;
+        }
+
+        #left-wall {
+            left: 0;
+            top: 0;
+            width: 40%;
+            height: 100%;
+            transform: rotateY(101deg);
+            transform-origin: left;
+            z-index: 5;
+            background: linear-gradient(to right, #000, #004400);
+
+            /* Centers any side-wall landmarks */
+            display: flex;
+            flex-direction: column;
+        }
+
+        #right-wall {
+            right: 0;
+            top: 0;
+            width: 40%;
+            height: 100%;
+            transform: rotateY(-101deg);
+            transform-origin: right;
+            z-index: 5;
+            background: linear-gradient(to left, #000, #004400);
+
+            /* Centers any side-wall landmarks */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- TACTICAL OVERLAYS --- */
+        #tactical-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 40, 0, 0.85);
+            color: #0f0;
+            z-index: 400;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 4px inset #0f0;
+            box-sizing: border-box;
+        }
+
+        #overlay-btn {
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        /* --- MELTDOWN & EXPLOSIONS --- */
+        #explosion-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+            z-index: 9998;
+        }
+
+        .fire-particle {
+            position: fixed;
+            bottom: -20px;
+            font-family: monospace;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        #meltdown-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 60px;
+            display: none;
+            z-index: 10000;
+            text-shadow: 0 0 20px red, 0 0 40px black;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .shatter {
+            pointer-events: none;
+            transition: transform 4s cubic-bezier(0.5, 0, 1, 1), opacity 3s !important;
+            transform: translateY(110vh) rotate(var(--r)) !important;
+            opacity: 0;
+        }
+
+        /* --- ESCAPE SEQUENCE --- */
+        .escape-sequence #game-container {
+            animation: cameraShake 0.1s infinite;
+        }
+
+        .escape-sequence #floor {
+            animation: floorRun 2s linear infinite;
+            opacity: 0.3;
+        }
+
+        .escape-sequence #front-wall {
+            background: #fff !important;
+            box-shadow: 0 0 100px 80px #fff;
+            border: none;
+            transition: all 2s ease-in;
+        }
+
+        .escape-sequence #left-wall {
+            transform: rotateY(90deg) translateX(-600px) !important;
+            transition: transform 3s ease-in;
+        }
+
+        .escape-sequence #right-wall {
+            transform: rotateY(-90deg) translateX(600px) !important;
+            transition: transform 3s ease-in;
+        }
+
+        @keyframes cameraShake {
+            0% {
+                transform: translate(1px, 1px) rotate(0deg);
+            }
+
+            20% {
+                transform: translate(-3px, 0px) rotate(1deg);
+            }
+
+            40% {
+                transform: translate(1px, -1px) rotate(1deg);
+            }
+
+            60% {
+                transform: translate(-3px, 1px) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(1px, 2px) rotate(0deg);
+            }
+        }
+
+        @keyframes floorRun {
+            from {
+                background-position: 0 0;
+            }
+
+            to {
+                background-position: 0 1000px;
+            }
+        }
+
+        #escape-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #000;
+            z-index: 1000;
+            font-size: 40px;
+            font-weight: bold;
+            display: none;
+            white-space: nowrap;
+            font-family: 'Impact', sans-serif;
+        }
+
+        .wind-particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            height: 2px;
+            pointer-events: none;
+            z-index: 1001;
+        }
+
+        /* --- UI CONTROLS & ADMIN --- */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            width: 350px;
+            margin-top: 10px;
+        }
+
+        button {
+            background: #001100;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 18px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 4s, opacity 3s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #0f0;
+            color: #000;
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+        .admin-panel {
+            margin-top: 15px;
+            padding: 10px;
+            border-top: 1px solid #333;
+            width: 100%;
+            background: #111;
+            font-size: 12px;
+            transition: transform 4s, opacity 3s;
+            color: #0f0;
+        }
+
+        .shatter .admin-panel strong,
+        .escape-sequence .admin-panel strong,
+        .dimmed .admin-panel strong {
+            opacity: 1;
+            color: #004400;
+            /* Add this line to slow it down */
+            transition: opacity 3s ease-in-out, color 3s ease-in-out !important;
+        }
+
+        /* Ensure walls in Area 0 are visible and white */
+        .epilogue-theme .wall {
+            background: #111 !important;
+            border-color: #fff !important;
+            color: #fff !important;
+            text-shadow: 0 0 5px #fff;
+        }
+
+        /* --- THE DREAMY EPILOGUE TRANSITION --- */
+
+        /* 1. Set the slow transition for all UI elements when the theme is active */
+        .epilogue-theme #timer-box,
+        .epilogue-theme #status,
+        .epilogue-theme #title-header,
+        .epilogue-theme .admin-panel,
+        .epilogue-theme #game-container,
+        .epilogue-theme button {
+            background: rgba(15, 15, 15, 0.8) !important;
+            transition: border-color 4s ease, color 4s ease, box-shadow 4s ease, background-color 4s ease !important;
+            border-color: #ffffff !important;
+            color: #ffffff !important;
+        }
+
+        .epilogue-theme #status {
+            background: rgba(15, 15, 15, 0.8) !important;
+            animation: none !important;
+            /* Explicitly kills any inherited animation */
+            box-shadow: none !important;
+            /* Ensures no glow appears */
+            z-index: 10 !important;
+            /* Keeps it layered behind the timer glow */
+        }
+
+        /* 3. The Dreamy Glow Keyframes */
+        @keyframes dreamyGlow {
+            0% {
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(255, 255, 255, 0.6);
+            }
+
+            100% {
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        /* 4. Ensure buttons also turn white with the same timing */
+        .epilogue-theme button {
+            background: transparent !important;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+
+        .epilogue-theme button:hover:not(:disabled) {
+            background: #fff !important;
+            color: #000 !important;
+            box-shadow: 0 0 20px #fff;
+        }
+
+        /* Add to the absolute bottom of the file */
+        .epilogue-theme .admin-panel strong {
+            color: #ffffff !important;
+            opacity: 0.5 !important;
+            transition: color 4s ease, opacity 4s ease !important;
+        }
+
+        /* --- UPDATED AREA 0 FLOOR GRID --- */
+        .epilogue-theme #floor {
+            /* Creates the white grid lines */
+            background:
+                linear-gradient(#ffffff 2px, transparent 2px),
+                linear-gradient(90deg, #ffffff 2px, transparent 2px) !important;
+
+            /* Matches the tile size of the main levels */
+            background-size: 80px 80px !important;
+
+            /* Makes the grid visible but slightly transparent to maintain depth */
+            opacity: 0.4;
+
+            /* Adds a soft white glow to the grid lines */
+            filter: drop-shadow(0 0 5px #fff);
+
+            /* Perspective settings inherited from the main floor */
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            transform: rotateX(80deg);
+            transform-origin: bottom;
+            z-index: 1;
+        }
+
+        /* Forces the head-bob to ignore the slow epilogue transitions */
+        .epilogue-theme #game-container.walk-anim {
+            animation: headBob 0.25s ease-in-out !important;
+            transition: none !important;
+        }
+
+        /* Update this at the absolute bottom of style.css */
+        body.epilogue-theme .admin-panel strong {
+            color: #ffffff !important;
+            opacity: 0.8 !important;
+            /* Increased from 0.5 to make it clearer */
+            transition: color 4s ease, opacity 4s ease !important;
+        }
+
+        /* --- AREA 0 WALL STYLING --- */
+
+        /* Changes the left wall to a black-to-white gradient */
+        .epilogue-theme #left-wall {
+            background: linear-gradient(to right, #000, #444) !important;
+            border-color: #fff !important;
+        }
+
+        /* Changes the right wall to a black-to-white gradient */
+        .epilogue-theme #right-wall {
+            background: linear-gradient(to left, #000, #444) !important;
+            border-color: #fff !important;
+        }
+
+        /* Ensures the front wall is solid white with a soft glow */
+        .epilogue-theme #front-wall {
+            background: #111 !important;
+            border-color: #fff !important;
+            color: #fff !important;
+            text-shadow: 0 0 10px #fff;
+        }
+
+        /* --- EPILOGUE GLITCH EFFECT --- */
+
+        .glitch-flicker {
+            animation: glitchAnim 0.25s linear forwards !important;
+            filter: brightness(2) contrast(2) !important;
+        }
+
+        @keyframes glitchAnim {
+            0% {
+                transform: translate(0);
+                box-shadow: 5px 0 red, -5px 0 blue;
+            }
+
+            20% {
+                transform: translate(-5px, 5px);
+                box-shadow: -5px 0 cyan, 5px 0 magenta;
+                filter: hue-rotate(90deg);
+            }
+
+            40% {
+                transform: translate(5px, -5px);
+                filter: invert(1);
+            }
+
+            60% {
+                transform: translate(-10px, 0);
+                box-shadow: 10px 0 yellow, -10px 0 purple;
+            }
+
+            80% {
+                transform: translate(5px, 5px);
+                filter: grayscale(1) brightness(3);
+            }
+
+            100% {
+                transform: translate(0);
+                box-shadow: none;
+            }
+        }
+
+        /* --- CLEAN ICE VIGNETTE ONLY --- */
+
+        .glitch-flicker {
+            /* Removed animation, transform, and filter for a stable look */
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* The Static Vignetted "Ice" Border */
+        .glitch-flicker::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1001;
+
+            /* Inset shadow creates the thick ice-blue border */
+            box-shadow: inset 0 0 60px 5px rgba(173, 216, 230, 0.7);
+
+            /* Smooth fade in and out with no flicker */
+            animation: iceVignetteFade 0.3s ease-in-out forwards;
+        }
+
+        @keyframes iceVignetteFade {
+            0% {
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
+        }
+
+        /* --- CONFETTI ANIMATION --- */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            z-index: 10001;
+            /* Above everything */
+            pointer-events: none;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Hides symbols and landmark containers during the escape flight */
+        .escape-sequence .symbol-flipper,
+        .escape-sequence .wall {
+            color: transparent !important;
+            text-shadow: none !important;
+        }
+
+        /* The Disco Overlay */
+        #disco-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            /* Allows clicking through to buttons if needed */
+            z-index: 999;
+            /* Just below the escape-text */
+            display: none;
+            opacity: 0.4;
+            /* Subtle enough to see the game, but bright enough for disco */
+        }
+
+        /* Animation for the moving lights */
+        @keyframes discoLights {
+            0% {
+                background: radial-gradient(circle at 20% 20%, red, transparent 50%);
+            }
+
+            25% {
+                background: radial-gradient(circle at 80% 20%, blue, transparent 50%);
+            }
+
+            50% {
+                background: radial-gradient(circle at 80% 80%, green, transparent 50%);
+            }
+
+            75% {
+                background: radial-gradient(circle at 20% 80%, purple, transparent 50%);
+            }
+
+            100% {
+                background: radial-gradient(circle at 20% 20%, red, transparent 50%);
+            }
+        }
+
+        .disco-active {
+            display: block !important;
+            animation: discoLights 2s infinite linear;
+        }
+
+        #persistent-key-hud {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            /* Removed background, border, and padding to delete the box */
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .hud-key-wrapper {
+            position: relative;
+            font-size: 32px;
+            /* Made slightly larger since there is no box framing them */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Added a stronger shadow so they are readable against any wall color */
+            filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.8));
+        }
+
+        .hud-x-mark {
+            position: absolute;
+            top: 50%;
+            left: -10%;
+            width: 120%;
+            height: 4px;
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+            z-index: 110;
+        }
+
+        .key-glow {
+            /* Stack three shadows: a sharp inner glow, a medium glow, and a massive outer bloom */
+            filter: drop-shadow(0 0 5px #00ffff) drop-shadow(0 0 20px #00aaff) drop-shadow(0 0 40px #0066ff) !important;
+            animation: keyPulse 1.5s infinite ease-in-out;
+        }
+
+        @keyframes keyPulse {
+
+            0%,
+            100% {
+                filter: drop-shadow(0 0 5px #00ffff) drop-shadow(0 0 20px #00aaff) drop-shadow(0 0 40px #0066ff) !important;
+            }
+
+            50% {
+                /* The "Big" state of the pulse */
+                filter: drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 35px #00aaff) drop-shadow(0 0 70px #0066ff) !important;
+            }
+        }
+    </style>
+
+    <script>
+        /* --- CONFIGURATION & STATE --- */
+        let isEscaping = false; // Prevents renderView from overriding the escape sequence
+        /* --- LANDMARK SHORTVALS --- */
+        const N4 = "4N", E4 = "4E", S4 = "4S", W4 = "4W";
+        const N5 = "5N", E5 = "5E", S5 = "5S", W5 = "5W";
+        const N6 = "6N", E6 = "6E", S6 = "6S", W6 = "6W";
+        const N7 = "7N", E7 = "7E", S7 = "7S", W7 = "7W";
+        const N8 = "8N", E8 = "8E", S8 = "8S", W8 = "8W";
+        const N9 = "9N", E9 = "9E", S9 = "9S", W9 = "9W"; // Joker Mark 🃏
+        const N10 = "10N", E10 = "10E", S10 = "10S", W10 = "10W"; // Tengu 👺
+        const N11 = "11N", E11 = "11E", S11 = "11S", W11 = "11W"; // Up Arrow ↑
+        const N12 = "12N", E12 = "12E", S12 = "12S", W12 = "12W"; // Right Arrow →
+        const N13 = "13N", E13 = "13E", S13 = "13S", W13 = "13W"; // Down Arrow ↓
+        const N14 = "14N", E14 = "14E", S14 = "14S", W14 = "14W"; // Left Arrow ←
+        const N15 = "15N", E15 = "15E", S15 = "15S", W15 = "15W"; // Eye Symbols 👁️
+
+        /* --- DUAL-CHANNEL CROSSFADE ENGINE --- */
+        let audioPool = [new Audio(), new Audio()];
+        let activeIndex = 0;
+        // let nextTrackUrl = "loop1.wav"; 
+        let introPlayed = false;
+        let isTransitioning = false; // Prevents double-triggering during crossfade
+
+        const dirMap = { "N": 0, "E": 1, "S": 2, "W": 3 };
+        const compassNames = ["NORTH", "EAST", "SOUTH", "WEST"];
+        const levels = {
+            1: {
+                map: [
+                    [1, 1, 1, S12, 1, 1, 1],
+                    [2, 0, 0, 0, 0, 0, "KW9"],
+                    [1, 1, 1, 0, 1, 1, 1],
+                    [E7, 0, 0, 0, 0, 0, 3],
+                    [1, 0, W4, 1, 1, 1, 1]
+                ],
+                startDir: "E"
+            },
+            2: {
+                map: [
+                    [0, 0, W8, E5, 0, 1, S6, 1],
+                    [0, S15, S15, 0, 0, W4, 2, 1],
+                    [0, 0, 0, 0, 1, 1, 0, 1],
+                    [0, N15, N15, 0, 1, 1, 0, S8],
+                    [3, 1, 0, 0, 0, 0, 0, 0],
+                    ["KE10", 0, 0, N14, 1, 1, N14, 1]
+                ],
+                startDir: "N"
+            },
+            3: {
+                map: [
+                    [0, 0, 0, 0, 0, 0, "KW5", S12, 1],
+                    [0, 1, S8, 1, S15, 1, 1, 0, 3],
+                    [0, W6, 0, 1, 0, 1, 1, 0, 1],
+                    [0, 1, 0, S12, 0, 0, 0, 0, 1],
+                    [0, 0, 0, 0, 0, 1, 1, 0, 1],
+                    [0, 1, 1, 0, 1, 0, 1, 0, W7],
+                    [2, 0, 0, 0, E9, 0, 0, 0, 1]
+                ],
+                startDir: "E"
+            },
+            4: {
+                map: [
+                    [0, 0, W9, 0, 0, 1, S15, 1, 1, 1],
+                    [0, 1, 0, E8, 0, 0, 0, 0, 0, S7],
+                    [0, 1, 0, 1, 0, 1, 0, "KS4", 0, 0],
+                    [0, E6, 0, 0, 0, 0, 1, 0, 1, 0],
+                    [0, "KW10", 0, 1, 1, 1, 1, 0, 1, 0],
+                    [0, 1, 0, 0, 3, 1, 2, 0, 0, 0],
+                    [0, 1, S14, 1, S14, 0, 0, 1, 1, 0],
+                    [0, 0, 0, 0, 0, 0, E5, 0, 0, 0]
+                ],
+                startDir: "E"
+            },
+            0: {
+                map: [
+                    [0, 0, 0, 1, "KE4", 0, 0, "KE5", 0, 0, 0, 0],
+                    [0, 1, 0, S14, 1, 0, 1, 0, 1, 0, 1, 0],
+                    [0, E8, 0, 0, 0, 0, 0, 0, E7, 2, 0, 0],
+                    [0, 1, 1, 1, 1, N10, 1, 0, 1, 0, 1, 0],
+                    [0, 0, 0, 0, 1, 0, 0, 0, W8, 0, 1, 0],
+                    [N6, S12, S9, 3, E7, 0, 1, 1, 1, 0, 0, 0],
+                    [0, 0, 0, "KW9", S12, 0, S15, 0, 0, N10, 1, 0],
+                    [0, N12, N9, 0, 0, 0, 0, E15, 0, 0, 0, 0],
+                    [0, 1, S14, 0, 1, N6, 0, 1, 1, 1, 0, N14],
+                    [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
+                ],
+                startDir: "S"
+            },
+        };
+
+        let currentLevel = 1, grid = [], px = 0, py = 0, dir = 0, gameRunning = false;
+        let collectedKeys = [];
+        let timeLeft = 720, timerInterval, fireSpawnInterval;
+
+        /* --- HELPER TABLES & FUNCTIONS --- */
+        const SYMBOLS = {
+            4: "🐄", 5: "🐿️", 6: "🐘", 7: "🐅", 8: "🐙",
+            9: "🃏", 10: "👺", 11: "↑", 12: "→", 13: "↓", 14: "←", 15: "👁️"
+        };
+        const LARGE_IDS = new Set([9, 11, 12, 13, 14, 15]);
+
+        function parseTile(tile) {
+            let id = 0, isNorth = false, isKey = false;
+            if (typeof tile === 'string') {
+                let match = tile.match(/\d+/);
+                id = match ? parseInt(match[0]) : 0;
+                isNorth = /N/i.test(tile);
+                isKey = /^K/i.test(tile);
+            } else {
+                id = tile;
+            }
+            return {id, isNorth, isKey};
+        }
+        function getSymbol(val) {
+            let match = (typeof val === 'string') ? val.match(/\d+/) : [val];
+            let num = match ? parseInt(match[0]) : val;
+            return SYMBOLS[num] || "";
+        }
+        function getSymbolData(val) {
+            const {id} = parseTile(val);
+            return {char: getSymbol(val), isLarge: LARGE_IDS.has(id)};
+        }
+        function dirOffsets(d) {
+            if (d === 0) return {dx:0,dy:-1};
+            if (d === 1) return {dx:1,dy:0};
+            if (d === 2) return {dx:0,dy:1};
+            if (d === 3) return {dx:-1,dy:0};
+            return {dx:0,dy:0};
+        }
+        function faceSeen(d) { return (d + 2) % 4; }
+        function isSolidTile(tile) {
+            return tile === 1 || tile >= 4 || typeof tile === 'string';
+        }
+        function flashError() {
+            const g = document.getElementById('game-container');
+            const mainBody = document.getElementById('main-body');
+            if (mainBody.classList.contains('epilogue-theme')) {
+                g.classList.remove('glitch-flicker');
+                void g.offsetWidth;
+                g.classList.add('glitch-flicker');
+                setTimeout(() => g.classList.remove('glitch-flicker'), 300);
+            } else {
+                g.style.borderColor = "red";
+                setTimeout(() => g.style.borderColor = "#444", 200);
+            }
+        }
+        function extractKeys(map) {
+            let keys = new Set();
+            map.forEach(row => {
+                row.forEach(tile => {
+                    if (typeof tile === 'string' && /^K/i.test(tile)) {
+                        let m = tile.match(/\d+/);
+                        if (m) keys.add(parseInt(m[0]));
+                    }
+                });
+            });
+            return keys;
+        }
+
+        // Returns an array of unique landmark IDs present in the current level
+        function getRequiredKeys() {
+            return Array.from(extractKeys(grid));
+        }
+
+        // Called when the user clicks the front wall
+        function clickWall() {
+            if (!gameRunning) return;
+            const {dx, dy} = dirOffsets(dir);
+            let tx = px + dx, ty = py + dy;
+            if (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length) return;
+            let tile = grid[ty][tx];
+            const faceBeingViewed = faceSeen(dir);
+            if (!isLandmarkVisible(tile, faceBeingViewed)) return;
+            if (typeof tile === 'string' && /^K/i.test(tile)) {
+                let id = parseInt(tile.match(/\d+/)[0]);
+                if (!collectedKeys.includes(id)) {
+                    collectedKeys.push(id);
+                    renderView();
+                    const fw = document.getElementById('front-wall');
+                    const originalColor = fw.style.backgroundColor;
+                    fw.style.backgroundColor = "rgba(0, 255, 0, 1)";
+                    setTimeout(() => fw.style.backgroundColor = originalColor, 150);
+                }
+            }
+        }
+
+        /* --- INITIALIZATION --- */
+        window.onload = generateMapButtons;
+
+        function generateMapButtons() {
+            const container = document.getElementById('map-button-container');
+            container.innerHTML = "";
+
+            // 1. Get all keys and separate "0" from the others
+            let keys = Object.keys(levels).filter(k => k !== "0");
+            keys.sort((a, b) => a - b); // Keep 1, 2, 3, 4 in order
+            keys.push("0"); // Force Level 0 to the very end
+
+            keys.forEach(lvl => {
+                const btn = document.createElement('button');
+                btn.className = "map-btn";
+                btn.style = "padding: 5px; font-size: 12px; margin: 0 5px;";
+
+                // Show "Secret" on the button text instead of "MAP 0"
+                let displayLabel = lvl === "0" ? "SECRET" : `${lvl}`;
+                btn.innerHTML = `💾 ${displayLabel}`;
+
+                btn.onclick = () => downloadMap(lvl);
+                container.appendChild(btn);
+            });
+        }
+
+        function initGame() {
+            if (gameRunning) return;
+            // Launch Audio System
+            initAudioSystem();
+            updateTimerDisplay();
+            document.getElementById('main-btn').innerText = "⮝";
+            document.getElementById('main-btn').onclick = moveForward;
+            loadLevel(1);
+            gameRunning = true;
+            startTimer();
+        }
+
+        /* --- CORE SYSTEMS --- */
+        function startTimer() {
+            updateTimerDisplay();
+
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+
+                // --- DYNAMIC AUDIO TENSION STEPS ---
+                if (timeLeft > 45) {
+                    nextTrackUrl = "loop1.wav";
+                }
+                else if (timeLeft <= 45 && timeLeft > 20) {
+                    nextTrackUrl = "loop2.wav";
+                }
+                else if (timeLeft <= 20) {
+                    nextTrackUrl = "loop3.wav";
+                }
+
+                // --- CRITICAL ALERT (10 SECONDS OR LESS) ---
+                const timerBox = document.getElementById('timer-box');
+                const statusText = document.getElementById('status');
+
+                if (timeLeft <= 90) {
+                    // Only the timer box turns red and flickers
+                    timerBox.classList.add('critical-alert');
+
+                    if (timeLeft <= 0) {
+                        // Only change text and turn status red when the game is over
+                        statusText.innerText = "SYSTEM SHUTDOWN";
+                        statusText.classList.add('critical-alert');
+                    }
+                } else {
+                    // Standard reset for new levels
+                    timerBox.classList.remove('critical-alert');
+                    statusText.classList.remove('critical-alert');
+                }
+
+                // --- MELTDOWN VISUALS ---
+                if (timeLeft <= 180 && timeLeft > 0) {
+                    document.getElementById('explosion-layer').style.display = "block";
+                    if (!fireSpawnInterval) startVariableFire(timeLeft <= 10 ? 80 : 200);
+                }
+
+                // --- TRIGGER EXPLOSION AT ZERO ---
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+
+                    audioPool.forEach(p => {
+                        p.pause();
+                        p.currentTime = 0;
+                    });
+
+                    triggerExplosion();
+                }
+            }, 1000);
+        }
+
+        function startVariableFire(ms) {
+            clearInterval(fireSpawnInterval);
+            fireSpawnInterval = setInterval(spawnGlitchFire, ms);
+        }
+
+        function updateTimerDisplay() {
+            let m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            let s = (timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('clock').innerText = `${m}:${s}`;
+        }
+
+        /* --- NAVIGATION --- */
+        function loadLevel(lvl) {
+            collectedKeys = [];
+            currentLevel = lvl;
+            grid = levels[lvl].map;
+            let rawDir = levels[lvl].startDir;
+            dir = (typeof rawDir === 'string') ? dirMap[rawDir.toUpperCase()] : rawDir;
+            for (let y = 0; y < grid.length; y++) {
+                for (let x = 0; x < grid[y].length; x++) {
+                    if (grid[y][x] === 2) { px = x; py = y; }
+                }
+            }
+            renderView();
+        }
+
+        function moveForward() {
+            if (!gameRunning || document.getElementById('tactical-overlay').style.display === "flex") return;
+            const {dx, dy} = dirOffsets(dir);
+            let tx = px + dx, ty = py + dy;
+            let targetTile = (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length) ? 1 : grid[ty][tx];
+
+            if (targetTile === 3) {
+                let required = getRequiredKeys();
+                if (!required.every(k => collectedKeys.includes(k))) {
+                    flashError();
+                    return;
+                }
+            }
+
+            if (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length ||
+                isSolidTile(grid[ty][tx])) {
+                flashError();
+            } else {
+                px = tx; py = ty;
+                const container = document.getElementById('game-container');
+                container.classList.remove('glitch-flicker');
+                container.classList.remove('walk-anim');
+                void container.offsetWidth;
+                container.classList.add('walk-anim');
+                if (grid[py][px] === 3) handleWin();
+                renderView();
+            }
+        }
+        function turnLeft() {
+            if (!gameRunning || document.getElementById('tactical-overlay').style.display === "flex") return;
+            dir = (dir + 3) % 4; renderView();
+        }
+
+        function turnRight() {
+            if (!gameRunning || document.getElementById('tactical-overlay').style.display === "flex") return;
+            dir = (dir + 1) % 4; renderView();
+        }
+
+        function isLandmarkVisible(val, faceBeingViewed) {
+            if (typeof val === 'number') return true;
+            if (typeof val === 'string') {
+                const str = val.toUpperCase();
+
+                // Map directions to indices
+                const sideMap = { 'N': 0, 'E': 1, 'S': 2, 'W': 3 };
+
+                // Check for direction characters anywhere in the string (e.g., "KW9", "E7")
+                let targetFace = -1;
+                if (str.includes('N')) targetFace = 0;
+                else if (str.includes('E')) targetFace = 1;
+                else if (str.includes('S')) targetFace = 2;
+                else if (str.includes('W')) targetFace = 3;
+
+                // If no direction is found, it's a global landmark (visible from all sides)
+                if (targetFace === -1) return true;
+
+                // Otherwise, only show if we are looking at that specific face
+                return targetFace === faceBeingViewed;
+            }
+            return false;
+        }
+
+        function updateKeyHUD() {
+            const hud = document.getElementById('persistent-key-hud');
+            if (!hud) return;
+            if (isEscaping) {
+                hud.innerHTML = "";
+                hud.style.display = "none";
+                return;
+            }
+            hud.innerHTML = "";
+            let required = getRequiredKeys();
+            if (required.length === 0) {
+                hud.style.display = "none";
+                return;
+            } else {
+                hud.style.display = "flex";
+            }
+            hud.style.boxShadow = "none";
+            required.forEach(id => {
+                const keyWrapper = document.createElement('div');
+                keyWrapper.className = "hud-key-wrapper";
+                keyWrapper.innerText = SYMBOLS[id] || "";
+                if (collectedKeys.includes(id)) {
+                    const x1 = document.createElement('div');
+                    x1.className = "hud-x-mark";
+                    x1.style.transform = "translateY(-50%) rotate(45deg)";
+                    const x2 = document.createElement('div');
+                    x2.className = "hud-x-mark";
+                    x2.style.transform = "translateY(-50%) rotate(-45deg)";
+                    keyWrapper.appendChild(x1);
+                    keyWrapper.appendChild(x2);
+                    keyWrapper.style.opacity = "0.5";
+                }
+                hud.appendChild(keyWrapper);
+            });
+        }
+
+        /* --- RENDER LOGIC --- */
+        function renderView() {
+            document.getElementById('status').innerText = `${compassNames[dir]}`;
+
+            // symbol helper defined above
+
+            // --- HELPER: APPLY TEXT & SCALE ---
+            const updateWallContent = (el, tile, faceIndex) => {
+                if (isEscaping) return;
+                el.classList.remove('large-landmark');
+                el.innerHTML = "";
+                el.style.backgroundColor = "";
+                el.style.boxShadow = "";
+
+                if (tile === 3) {
+                    // --- EXIT DOOR: 2 LINES ---
+                    const title = document.createElement('div');
+                    title.innerText = "EXIT";
+                    title.style.fontWeight = "bold";
+                    el.appendChild(title);
+
+                    let required = getRequiredKeys();
+                    if (required.length > 0) {
+                        const symbolContainer = document.createElement('div');
+                        symbolContainer.style = "display:flex; flex-direction:row; justify-content:center; align-items:center; gap:15px; margin-top:10px; width:100%;";
+
+                        required.forEach(id => {
+                            const data = getSymbolData(id);
+                            const keyWrapper = document.createElement('div');
+                            keyWrapper.style = "position:relative; display:flex; justify-content:center; align-items:center;";
+                            keyWrapper.innerText = data.char;
+
+                            // Add blue glow to required keys on the door if not yet collected
+                            if (!collectedKeys.includes(id)) {
+                                keyWrapper.classList.add('key-glow');
+                            }
+
+                            if (collectedKeys.includes(id)) {
+                                const xStyle = "position:absolute; top:50%; left:0; width:100%; height:4px; background:red; transform:translateY(-50%)";
+                                const x1 = document.createElement('div');
+                                x1.style = xStyle + " rotate(45deg); z-index:10;";
+                                const x2 = document.createElement('div');
+                                x2.style = xStyle + " rotate(-45deg); z-index:10;";
+                                keyWrapper.appendChild(x1);
+                                keyWrapper.appendChild(x2);
+                            }
+                            symbolContainer.appendChild(keyWrapper);
+                        });
+                        el.appendChild(symbolContainer);
+                    }
+                } else if (isLandmarkVisible(tile, faceIndex)) {
+                    // --- STANDARD LANDMARK ---
+                    let id;
+                    let isNorth = false;
+                    let isKey = false;
+
+                    if (typeof tile === 'string') {
+                        let match = tile.match(/\d+/);
+                        id = match ? parseInt(match[0]) : 0;
+                        if (tile.toUpperCase().includes('N')) isNorth = true;
+                        if (tile.toUpperCase().startsWith('K')) isKey = true;
+                    } else {
+                        id = tile;
+                    }
+
+                    const data = getSymbolData(id);
+                    const symbolWrapper = document.createElement('div');
+                    symbolWrapper.style = "position:relative; display:inline-block;";
+
+                    // KILL FAINT BORDER: Explicitly reset any inherited glowing styles
+                    symbolWrapper.style.textShadow = "none !important";
+                    symbolWrapper.style.webkitTextStroke = "0px !important";
+
+                    const flipper = document.createElement('span');
+                    flipper.className = "symbol-flipper";
+                    flipper.innerText = data.char;
+                    if (isNorth) flipper.style.transform = "scaleX(-1)";
+
+                    symbolWrapper.appendChild(flipper);
+                    el.appendChild(symbolWrapper);
+
+                    // --- BLUE GLOW LOGIC ---
+                    // Apply glow if it's a key and NOT yet collected
+                    if (isKey && !collectedKeys.includes(id)) {
+                        symbolWrapper.classList.add('key-glow');
+                    }
+
+                    if (isKey && collectedKeys.includes(id)) {
+                        symbolWrapper.classList.remove('key-glow'); // Remove glow when collected
+                        el.style.backgroundColor = "#004400";
+                        el.style.boxShadow = "inset 0 0 30px #002200";
+                        const xStyle = "position:absolute; top:50%; left:-10%; width:120%; height:6px; background:red; transform:translateY(-50%)";
+                        const x1 = document.createElement('div');
+                        x1.style = xStyle + " rotate(45deg); z-index:10;";
+                        const x2 = document.createElement('div');
+                        x2.style = xStyle + " rotate(-45deg); z-index:10;";
+                        symbolWrapper.appendChild(x1);
+                        symbolWrapper.appendChild(x2);
+                    }
+                    if (data.isLarge) el.classList.add('large-landmark');
+                }
+                updateKeyHUD();
+            };
+
+            const faceSeenIdx = faceSeen(dir);
+
+            const {dx:fdx, dy:fdy} = dirOffsets(dir);
+            let tx = px + fdx, ty = py + fdy;
+            let frontTile = (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length) ? 1 : grid[ty][tx];
+            const frontEl = document.getElementById('front-wall');
+            let isSolid = isSolidTile(frontTile);
+            frontEl.style.display = (isSolid || frontTile === 3) ? "flex" : "none";
+            updateWallContent(frontEl, frontTile, faceSeenIdx);
+
+            // --- SIDE WALLS VISIBILITY FIX ---
+            ['left','right'].forEach(side => {
+                let d = side === 'left' ? (dir + 3) % 4 : (dir + 1) % 4;
+                const {dx:sdx, dy:sdy} = dirOffsets(d);
+                let sx = px + sdx, sy = py + sdy;
+                let tile = (sy < 0 || sy >= grid.length || sx < 0 || sx >= grid[0].length) ? 1 : grid[sy][sx];
+                const wallEl = document.getElementById(`${side}-wall`);
+                let solid = isSolidTile(tile) || tile === 3;
+                wallEl.style.opacity = solid ? "1" : "0";
+                let faceIndex = side === 'left' ? (dir + 1) % 4 : (dir + 3) % 4;
+                updateWallContent(wallEl, tile, faceIndex);
+            });
+        }
+        function checkWall(d) {
+            const {dx, dy} = dirOffsets(d);
+            let tx = px + dx, ty = py + dy;
+            return (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length ||
+                isSolidTile(grid[ty][tx]));
+        }
+
+        /* --- ENDGAME & WIN SEQUENCES --- */
+        function handleWin() {
+            const nextLvl = currentLevel + 1;
+
+            // Reset UI alerts
+            const timerBox = document.getElementById('timer-box');
+            const statusText = document.getElementById('status');
+            timerBox.classList.remove('critical-alert');
+            statusText.classList.remove('critical-alert');
+
+            // --- LEVEL 0 SPECIAL ENDING ---
+            if (currentLevel === 0) {
+                gameRunning = false;
+                clearInterval(timerInterval);
+                clearInterval(fireSpawnInterval);
+
+                // 1. Trigger the Disco Lights
+                const disco = document.getElementById('disco-overlay');
+                if (disco) {
+                    disco.classList.add('disco-active');
+                }
+
+                // Update Status
+                statusText.innerText = "S Y S T E M   L I B E R A T E D";
+                statusText.style.color = "#fff";
+                statusText.style.textShadow = "0 0 20px #fff";
+
+                // Disable movement
+                document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+
+                // Pop Confetti
+                for (let i = 0; i < 100; i++) {
+                    setTimeout(spawnConfetti, i * 20);
+                }
+
+                // Optional: Final message overlay after a delay
+                setTimeout(() => {
+                    const escapeText = document.getElementById('escape-text');
+                    escapeText.innerText = "ESCAPED";
+                    escapeText.style.display = "block";
+                    escapeText.style.color = "white";
+                }, 0);
+
+                return; // Stop here, don't look for next levels
+            }
+
+            // --- STANDARD WIN LOGIC ---
+            if (levels[nextLvl]) {
+                clearInterval(fireSpawnInterval);
+                const overlay = document.getElementById('tactical-overlay');
+                overlay.style.display = "flex";
+                document.getElementById('overlay-btn').onclick = () => {
+                    loadLevel(nextLvl);
+                    closeOverlay();
+                };
+            } else {
+                clearInterval(timerInterval);
+                clearInterval(fireSpawnInterval);
+                document.getElementById('admin-box').classList.add('dimmed');
+                triggerEscapeSequence();
+            }
+        }
+
+        // Helper function to create the confetti
+        function spawnConfetti() {
+            const p = document.createElement('div');
+            p.className = 'confetti';
+
+            // Randomize colors (vibrant and white for Area 0 theme)
+            const colors = ['#ffffff', '#00ff00', '#00ffff', '#ff00ff', '#ffff00'];
+            p.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+            // Random position and physics
+            p.style.left = Math.random() * 100 + "vw";
+            p.style.top = "-10px";
+            document.body.appendChild(p);
+
+            let posY = -10;
+            let posX = parseFloat(p.style.left);
+            let drift = (Math.random() - 0.5) * 2;
+            let fallSpeed = 2 + Math.random() * 5;
+            let rotation = Math.random() * 360;
+
+            function fall() {
+                posY += fallSpeed;
+                posX += drift;
+                rotation += 5;
+                p.style.transform = `translateY(${posY}px) translateX(${drift}px) rotate(${rotation}deg)`;
+
+                if (posY < window.innerHeight) {
+                    requestAnimationFrame(fall);
+                } else {
+                    p.remove();
+                }
+            }
+            requestAnimationFrame(fall);
+        }
+
+        function closeOverlay() { document.getElementById('tactical-overlay').style.display = "none"; }
+
+        function triggerEscapeSequence() {
+            gameRunning = false;
+            isEscaping = true;
+
+            const mainBody = document.getElementById('main-body');
+            const container = document.getElementById('game-container');
+            const escapeText = document.getElementById('escape-text');
+
+            const fWall = document.getElementById('front-wall');
+            const lWall = document.getElementById('left-wall');
+            const rWall = document.getElementById('right-wall');
+
+            // 1. CLEANUP: Clear symbols so they don't "stretch" during the transition
+            fWall.innerHTML = "";
+            lWall.innerHTML = "";
+            rWall.innerHTML = "";
+
+            // 2. THE PULL-AWAY: Slowly fade side walls while front wall prepares to glow
+            // We don't use 'important' yet so the transition CSS can play out
+            lWall.style.opacity = "0";
+            rWall.style.opacity = "0";
+            lWall.style.transition = "opacity 2s ease-in, transform 2s ease-in";
+            rWall.style.transition = "opacity 2s ease-in, transform 2s ease-in";
+
+            // 3. FRONT WALL PREP: Ensure it is visible but wait for the glow
+            fWall.style.display = "flex";
+            fWall.style.opacity = "1";
+
+            // Lock UI
+            document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+            mainBody.classList.add('escape-sequence');
+
+            // Spawn wind particles
+            for (let i = 0; i < 50; i++) setTimeout(spawnWindParticle, i * 50);
+
+            // --- STAGE 1: LOCK SIDES & GLOW (After 2 seconds) ---
+            setTimeout(() => {
+                // Now we lock them as invisible so turning doesn't break the "tunnel"
+                lWall.style.setProperty("display", "none", "important");
+                rWall.style.setProperty("display", "none", "important");
+
+                // Force the front wall to white
+                fWall.style.setProperty("background-color", "white", "important");
+                fWall.style.setProperty("border", "none", "important");
+                fWall.style.setProperty("transform", "scale(1)", "important");
+
+                container.style.filter = "brightness(8) blur(5px)";
+            }, 2000);
+
+            // --- STAGE 2: THEME SWITCH (After 5 seconds) ---
+            setTimeout(() => {
+                mainBody.classList.add('epilogue-theme');
+            }, 5000);
+
+            // --- STAGE 3: ARRIVAL (After 12 seconds) ---
+            setTimeout(() => {
+                isEscaping = false;
+
+                mainBody.classList.remove('escape-sequence');
+                container.style.filter = "none";
+
+                // Clean up locks
+                fWall.style.removeProperty("background-color");
+                fWall.style.removeProperty("border");
+                fWall.style.removeProperty("transform");
+                fWall.style.removeProperty("display");
+                fWall.style.removeProperty("opacity");
+
+                lWall.style.removeProperty("display");
+                lWall.style.removeProperty("opacity");
+                lWall.style.removeProperty("transition");
+                rWall.style.removeProperty("display");
+                rWall.style.removeProperty("opacity");
+                rWall.style.removeProperty("transition");
+
+                loadLevel(0);
+
+                // Re-enable UI
+                document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                const mainBtn = document.getElementById('main-btn');
+                mainBtn.innerText = "MOVE";
+
+                gameRunning = true;
+            }, 12000);
+        }
+
+        /* --- MELTDOWN LOGIC --- */
+        function triggerExplosion() {
+            clearInterval(timerInterval);
+            gameRunning = false;
+            document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+            startVariableFire(10);
+            document.getElementById('main-body').classList.add('doors-shut');
+
+            const els = [
+                document.getElementById('timer-box'),
+                document.getElementById('status'),
+                document.getElementById('admin-box'),
+                ...document.querySelectorAll('.controls button'),
+                document.getElementById('title-header'),
+                document.getElementById('game-container')
+            ];
+
+            els.forEach((el, i) => {
+                setTimeout(() => {
+                    el.style.setProperty('--r', `${Math.floor(Math.random() * 60) - 30}deg`);
+                    el.classList.add('shatter');
+                }, i * 350 + 1000);
+            });
+
+            setTimeout(() => { document.getElementById('meltdown-text').style.display = "block"; }, 2000);
+            setTimeout(() => location.reload(), 12000);
+        }
+
+        /* --- VISUAL EFFECTS --- */
+        function spawnGlitchFire() {
+            const layer = document.getElementById('explosion-layer');
+            if (!layer) return;
+            const p = document.createElement('div');
+            p.className = 'fire-particle';
+            p.innerText = ["0", "1", "ERR", "NULL"][Math.floor(Math.random() * 4)];
+            p.style.left = Math.random() * 100 + "vw";
+            p.style.color = gameRunning ? "#ffaa00" : "#f00";
+            layer.appendChild(p);
+            let h = 0;
+            function move() {
+                h += 10; p.style.transform = `translate3d(0, ${-h}px, 0)`;
+                p.style.opacity = 1 - (h / window.innerHeight);
+                if (h < window.innerHeight) requestAnimationFrame(move); else p.remove();
+            }
+            requestAnimationFrame(move);
+        }
+
+        function spawnWindParticle() {
+            const container = document.getElementById('game-container');
+            const p = document.createElement('div');
+            p.className = 'wind-particle';
+            const startX = 275, startY = 160;
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 5 + Math.random() * 15;
+            p.style.width = (10 + Math.random() * 30) + "px";
+            p.style.left = startX + "px"; p.style.top = startY + "px";
+            p.style.transform = `rotate(${angle}rad)`;
+            container.appendChild(p);
+            let dist = 0;
+            function animate() {
+                dist += speed;
+                p.style.left = (startX + Math.cos(angle) * dist) + "px";
+                p.style.top = (startY + Math.sin(angle) * dist) + "px";
+                p.style.opacity = 1 - (dist / 400);
+                if (dist < 400) requestAnimationFrame(animate); else p.remove();
+            }
+            animate();
+        }
+
+        /* --- TACTICAL INTEL (MAP EXPORT) --- */
+        function downloadMap(lvl) {
+            if (!gameRunning && timeLeft <= 0) return;
+            const c = document.getElementById('mapCanvas');
+            const ctx = c.getContext('2d');
+            const mapData = levels[lvl].map;
+            const ts = 60;
+            c.width = mapData[0].length * ts + 40;
+            c.height = mapData.length * ts + 120;
+            ctx.fillStyle = "#111"; ctx.fillRect(0, 0, c.width, c.height);
+
+
+            for (let y = 0; y < mapData.length; y++) {
+                for (let x = 0; x < mapData[y].length; x++) {
+                    let val = mapData[y][x];
+                    let xp = x * ts + 20, yp = y * ts + 20;
+                    ctx.strokeStyle = "#333"; ctx.strokeRect(xp, yp, ts, ts);
+
+                    if (val === 1) {
+                        ctx.fillStyle = "#222"; ctx.fillRect(xp + 2, yp + 2, ts - 4, ts - 4);
+                    }
+                    else if (val === 0) {
+                        ctx.fillStyle = "#fff"; ctx.fillRect(xp + 2, yp + 2, ts - 4, ts - 4);
+                    }
+                    else if (val === 2) {
+                        ctx.fillStyle = "#0f0"; ctx.fillRect(xp + 2, yp + 2, ts - 4, ts - 4);
+                        ctx.fillStyle = "black"; ctx.font = "bold 12px Arial";
+                        ctx.textAlign = "left";
+                        ctx.fillText("START", xp + 10, yp + 35);
+                    }
+                    else if (val === 3) {
+                        ctx.fillStyle = "#f00"; ctx.fillRect(xp + 2, yp + 2, ts - 4, ts - 4);
+                        ctx.fillStyle = "white"; ctx.font = "bold 12px Arial";
+                        ctx.textAlign = "left";
+                        ctx.fillText("EXIT", xp + 15, yp + 35);
+                    }
+                    else if (val >= 4 || typeof val === 'string') {
+                        ctx.fillStyle = "#1a1a1a";
+                        ctx.fillRect(xp + 2, yp + 2, ts - 4, ts - 4);
+
+                        let symbol = getSymbol(val);
+                        let valStr = String(val).toUpperCase();
+
+                        // 1. Correct Direction Detection: W9 ends in 9, starts with W
+                        // We check if it starts with 'K', 'N', 'E', 'S', or 'W'
+                        let dirChar = 'ALL';
+                        if (typeof val === 'string') {
+                            if (valStr.includes('N')) dirChar = 'N';
+                            else if (valStr.includes('E')) dirChar = 'E';
+                            else if (valStr.includes('S')) dirChar = 'S';
+                            else if (valStr.includes('W')) dirChar = 'W';
+                        }
+
+                        // 2. Correct Color Detection: Baby Blue if starts with K, else Green
+                        let themeColor = valStr.startsWith('K') ? "#89CFF0" : "#0f0";
+
+                        let match = valStr.match(/\d+/);
+                        let num = match ? parseInt(match[0]) : val;
+
+                        // Readability Overrides
+                        if (dirChar === 'W') {
+                            if (num === 12) symbol = "↓";
+                            if (num === 14) symbol = "↑";
+                        }
+                        else if (dirChar === 'E') {
+                            if (num === 12) symbol = "↑";
+                            if (num === 14) symbol = "↓";
+                        }
+
+                        ctx.font = "26px Arial";
+                        ctx.fillStyle = themeColor;
+                        const wallThick = 6;
+                        const padding = 14;
+
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+
+                        let sx = xp + ts / 2;
+                        let sy = yp + ts / 2;
+
+                        // DRAW ONLY THE COLORED SIDE BAR
+                        if (dirChar === 'N') {
+                            ctx.fillRect(xp, yp, ts, wallThick);
+                            sy = yp + wallThick + padding;
+                        } else if (dirChar === 'S') {
+                            ctx.fillRect(xp, yp + ts - wallThick, ts, wallThick);
+                            sy = yp + ts - wallThick - padding;
+                        } else if (dirChar === 'W') {
+                            ctx.fillRect(xp, yp, wallThick, ts);
+                            sx = xp + wallThick + padding;
+                        } else if (dirChar === 'E') {
+                            ctx.fillRect(xp + ts - wallThick, yp, wallThick, ts);
+                            sx = xp + ts - wallThick - padding;
+                        } else {
+                            // Default border for landmarks without a specific direction string
+                            ctx.strokeStyle = themeColor;
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(xp + 8, yp + 8, ts - 16, ts - 16);
+                        }
+                        ctx.fillText(symbol, sx, sy);
+                    }
+                }
+            }
+
+            // --- REVERTED FOOTER LOGIC ---
+            // --- UPDATED LARGE SINGLE-LINE FOOTER ---
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#0f0"; // Tactical Green
+            ctx.font = "bold 60px Courier New"; // Large, monospace font
+
+            // 1. Identify keys specifically for this map
+            let requiredKeys = extractKeys(mapData);
+
+            // 2. Render the Map Number
+            let footerLabel = `#${lvl === "0" ? "Secret" : lvl} `;
+            ctx.fillText(footerLabel, 20, c.height - 50);
+
+            // 3. Render Emojis on the same line
+            let offset = ctx.measureText(footerLabel).width + 40;
+            requiredKeys.forEach(id => {
+                ctx.fillText(getSymbol(id), offset, c.height - 50);
+                offset += 70;
+            });
+            const link = document.createElement('a');
+            // Locate the link.download line:
+            link.download = `${lvl === "0" ? "Secret" : lvl}.png`;
+            link.href = c.toDataURL();
+            link.click();
+        }
+
+        function initAudioSystem() {
+            let current = audioPool[activeIndex];
+            current.src = "intro.mp3";
+            current.volume = 1.0;
+            current.play();
+
+            audioPool.forEach(player => {
+                player.addEventListener('timeupdate', monitorTransition);
+            });
+        }
+
+        function monitorTransition() {
+            let current = audioPool[activeIndex];
+            let next = audioPool[1 - activeIndex];
+
+            // Trigger 0.1s before end to ensure the 'kick' is ready
+            // You can tune '0.1' to '0.05' if your kick feels too early
+            if (current.duration > 0 && current.currentTime > (current.duration - 0.15)) {
+                if (!isTransitioning) {
+                    isTransitioning = true;
+                    triggerNextTrack(current, next);
+                }
+            }
+        }
+
+        function triggerNextTrack(current, next) {
+            if (!introPlayed) introPlayed = true;
+
+            // 1. Fire the next track at full volume immediately
+            next.src = nextTrackUrl;
+            next.volume = 1.0;
+            next.play();
+
+            // 2. Kill the old track after a tiny overlap (50ms)
+            // This overlap ensures there is zero silence between the two samples
+            setTimeout(() => {
+                current.pause();
+                current.currentTime = 0;
+                activeIndex = 1 - activeIndex;
+                isTransitioning = false;
+            }, 50);
+        }
+    </script>
+    <script defer="defer" src="Nav%20Protocol_files/v8c78df7c7c0f484497ecbca7046644da1771523124516.es"
+        integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg=="
+        data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;e5631aad7be3443cba4a00112dc8643a&quot;,&quot;r&quot;:1,&quot;server_timing&quot;:{&quot;name&quot;:{&quot;cfCacheStatus&quot;:true,&quot;cfEdge&quot;:true,&quot;cfExtPri&quot;:true,&quot;cfL4&quot;:true,&quot;cfOrigin&quot;:true,&quot;cfSpeedBrain&quot;:true},&quot;location_startswith&quot;:null}}"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
