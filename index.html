@@ -1,10 +1,10 @@
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
     <title>Nav Protocol</title>
-    <link rel="stylesheet" href="Nav%20Protocol_files/style.css">
 </head>
 
 <body id="main-body">
@@ -16,8 +16,14 @@
         <!-- <h2 id="title-header">ENGLISH ESCAPE</h2> -->
         <div id="timer-box">TIME: <span id="clock">12:00</span></div>
         <div id="status">NORTH</div>
+        <!-- additional indicator shown when standing on a warp tile -->
+        <div id="warp-indicator" style="display:none; color:#0ff; font-weight:bold; margin:5px;">WARP</div>
 
         <div id="game-container" class="walk-anim" style="border-color: rgb(68, 68, 68);">
+            <div id="start-message">
+                <p>Click START to begin</p>
+            </div>
+
             <div id="escape-text">SURFACE REACHED</div>
 
             <div id="tactical-overlay" style="display: none;">
@@ -26,8 +32,8 @@
                 <button id="overlay-btn" onclick="closeOverlay()">NEXT MAP</button>
             </div>
             <div id="persistent-key-hud" style="display: flex; box-shadow: none;">
-                <div class="hud-key-wrapper" style="opacity: 0.5;">👺<div class="hud-x-mark"
-                        style="transform: translateY(-50%) rotate(45deg);"></div>
+                <div class="hud-key-wrapper" style="opacity: 0.5;">
+                    <div class="hud-x-mark" style="transform: translateY(-50%) rotate(45deg);"></div>
                     <div class="hud-x-mark" style="transform: translateY(-50%) rotate(-45deg);"></div>
                 </div>
             </div>
@@ -38,19 +44,22 @@
                 <div class="handle"></div>
             </div>
             <div id="floor"></div>
-            <div id="left-wall" class="wall" style="opacity: 1;"></div>
+            <div id="left-wall" class="wall" style="opacity: 1;">
+                <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
+            </div>
             <div id="right-wall" class="wall" style="opacity: 1;">
                 <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
             </div>
             <div id="front-wall" class="wall" onclick="clickWall()" style="display: flex;">
-                <div style="position: relative; display: inline-block;"><span class="symbol-flipper">🐘</span></div>
+                <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
             </div>
         </div>
 
         <div class="controls">
             <button class="nav-btn" onclick="turnLeft()">↺ L</button>
-            <button id="main-btn" onclick="initGame()">⮝</button>
+            <button id="main-btn" onclick="initGame()">START</button>
             <button class="nav-btn" onclick="turnRight()">R ↻</button>
+            <button id="warp-btn" onclick="performWarp()" style="display:none;">WARP</button>
         </div>
 
         <div id="admin-box" class="admin-panel">
@@ -66,7 +75,6 @@
 
     <canvas id="mapCanvas" style="display:none;"></canvas>
     <div id="disco-overlay"></div>
-    <script src="Nav%20Protocol_files/script.js"></script>
 
 
 
@@ -97,6 +105,24 @@
             color: yellow;
             margin: 5px;
             transition: transform 4s, opacity 3s;
+        }
+
+        /* warp UI styles */
+        #warp-indicator {
+            font-size: 24px;
+            color: #0ff;
+            margin: 5px;
+        }
+
+        #warp-btn {
+            background: #001122;
+            color: #0ff;
+            border-color: #0ff;
+        }
+
+        #warp-btn:hover:not(:disabled) {
+            background: #0ff;
+            color: #000;
         }
 
         /* --- THE HUD BOX (Initial State) --- */
@@ -948,17 +974,35 @@
                 filter: drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 35px #00aaff) drop-shadow(0 0 70px #0066ff) !important;
             }
         }
+
+        #start-message {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #000;
+        }
+
+        #start-message p {
+            font-size: 48px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
     </style>
 
     <script>
         /* --- CONFIGURATION & STATE --- */
         let isEscaping = false; // Prevents renderView from overriding the escape sequence
         /* --- LANDMARK SHORTVALS --- */
-        const N4 = "4N", E4 = "4E", S4 = "4S", W4 = "4W";
-        const N5 = "5N", E5 = "5E", S5 = "5S", W5 = "5W";
-        const N6 = "6N", E6 = "6E", S6 = "6S", W6 = "6W";
-        const N7 = "7N", E7 = "7E", S7 = "7S", W7 = "7W";
-        const N8 = "8N", E8 = "8E", S8 = "8S", W8 = "8W";
+        const N4 = "4N", E4 = "4E", S4 = "4S", W4 = "4W"; // cow 🐄
+        const N5 = "5N", E5 = "5E", S5 = "5S", W5 = "5W"; // risu 🐿️
+        const N6 = "6N", E6 = "6E", S6 = "6S", W6 = "6W"; // elephant 🐘
+        const N7 = "7N", E7 = "7E", S7 = "7S", W7 = "7W"; // tiger 🐅
+        const N8 = "8N", E8 = "8E", S8 = "8S", W8 = "8W"; // octopus 🐙
         const N9 = "9N", E9 = "9E", S9 = "9S", W9 = "9W"; // Joker Mark 🃏
         const N10 = "10N", E10 = "10E", S10 = "10S", W10 = "10W"; // Tengu 👺
         const N11 = "11N", E11 = "11E", S11 = "11S", W11 = "11W"; // Up Arrow ↑
@@ -966,6 +1010,19 @@
         const N13 = "13N", E13 = "13E", S13 = "13S", W13 = "13W"; // Down Arrow ↓
         const N14 = "14N", E14 = "14E", S14 = "14S", W14 = "14W"; // Left Arrow ←
         const N15 = "15N", E15 = "15E", S15 = "15S", W15 = "15W"; // Eye Symbols 👁️
+        const N16 = "16N", E16 = "16E", S16 = "16S", W16 = "16W"; // sickle-hammer ⚒️
+        const N17 = "17N", E17 = "17E", S17 = "17S", W17 = "17W"; // cat 🐈
+        const N18 = "18N", E18 = "18E", S18 = "18S", W18 = "18W";
+        const N19 = "19N", E19 = "19E", S19 = "19S", W19 = "19W";
+        const N20 = "20N", E20 = "20E", S20 = "20S", W20 = "20W"; // cow2 🐂
+        const N21 = "21N", E21 = "21E", S21 = "21S", W21 = "21W"; // cow3 🐃
+        const N22 = "22N", E22 = "22E", S22 = "22S", W22 = "22W"; // otter 🦦
+        const N23 = "23N", E23 = "23E", S23 = "23S", W23 = "23W"; // deel 🦌
+        const N24 = "24N", E24 = "24E", S24 = "24S", W24 = "24W"; // indonesia 🇮🇩
+        const N25 = "25N", E25 = "25E", S25 = "25S", W25 = "25W"; // japan 🇯🇵
+        const N26 = "26N", E26 = "26E", S26 = "26S", W26 = "26W"; // monaco 🇲🇨
+        const N27 = "27N", E27 = "27E", S27 = "27S", W27 = "27W"; // burkina faso 🇧🇫
+        const N28 = "28N", E28 = "28E", S28 = "28S", W28 = "28W"; // lesotho 🇱🇸
 
         /* --- DUAL-CHANNEL CROSSFADE ENGINE --- */
         let audioPool = [new Audio(), new Audio()];
@@ -979,11 +1036,8 @@
         const levels = {
             1: {
                 map: [
-                    [1, 1, 1, S12, 1, 1, 1],
-                    [2, 0, 0, 0, 0, 0, "KW9"],
-                    [1, 1, 1, 0, 1, 1, 1],
-                    [E7, 0, 0, 0, 0, 0, 3],
-                    [1, 0, W4, 1, 1, 1, 1]
+                    [1, 1, 1, 0, 0, 0, 1, 1, S7, 1, 1, 0, 1, 0, 1, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, E16, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, N20, 0, 1, 1, 1, 0, 0]
                 ],
                 startDir: "E"
             },
@@ -996,7 +1050,9 @@
                     [3, 1, 0, 0, 0, 0, 0, 0],
                     ["KE10", 0, 0, N14, 1, 1, N14, 1]
                 ],
-                startDir: "N"
+                startDir: "N",
+                // warp pairs defined as [{x,y},{x,y}] tuples
+                warps: [[{ x: 4, y: 0 }, { x: 1, y: 5 }]]
             },
             3: {
                 map: [
@@ -1061,7 +1117,39 @@
             } else {
                 id = tile;
             }
-            return {id, isNorth, isKey};
+            return { id, isNorth, isKey };
+        }
+
+        // --- WARP UTILITIES ---
+        function isWarpCell(x, y, lvl = currentLevel) {
+            const level = levels[lvl];
+            if (!level || !level.warps) return false;
+            for (const pair of level.warps) {
+                if ((pair[0].x === x && pair[0].y === y) || (pair[1].x === x && pair[1].y === y)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function getWarpDest(x, y) {
+            const level = levels[currentLevel];
+            if (!level || !level.warps) return null;
+            for (const pair of level.warps) {
+                if (pair[0].x === x && pair[0].y === y) return pair[1];
+                if (pair[1].x === x && pair[1].y === y) return pair[0];
+            }
+            return null;
+        }
+
+        function performWarp() {
+            if (!gameRunning) return;
+            const dest = getWarpDest(px, py);
+            if (dest) {
+                px = dest.x;
+                py = dest.y;
+                renderView();
+            }
         }
         function getSymbol(val) {
             let match = (typeof val === 'string') ? val.match(/\d+/) : [val];
@@ -1069,15 +1157,15 @@
             return SYMBOLS[num] || "";
         }
         function getSymbolData(val) {
-            const {id} = parseTile(val);
-            return {char: getSymbol(val), isLarge: LARGE_IDS.has(id)};
+            const { id } = parseTile(val);
+            return { char: getSymbol(val), isLarge: LARGE_IDS.has(id) };
         }
         function dirOffsets(d) {
-            if (d === 0) return {dx:0,dy:-1};
-            if (d === 1) return {dx:1,dy:0};
-            if (d === 2) return {dx:0,dy:1};
-            if (d === 3) return {dx:-1,dy:0};
-            return {dx:0,dy:0};
+            if (d === 0) return { dx: 0, dy: -1 };
+            if (d === 1) return { dx: 1, dy: 0 };
+            if (d === 2) return { dx: 0, dy: 1 };
+            if (d === 3) return { dx: -1, dy: 0 };
+            return { dx: 0, dy: 0 };
         }
         function faceSeen(d) { return (d + 2) % 4; }
         function isSolidTile(tile) {
@@ -1117,7 +1205,7 @@
         // Called when the user clicks the front wall
         function clickWall() {
             if (!gameRunning) return;
-            const {dx, dy} = dirOffsets(dir);
+            const { dx, dy } = dirOffsets(dir);
             let tx = px + dx, ty = py + dy;
             if (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length) return;
             let tile = grid[ty][tx];
@@ -1169,7 +1257,8 @@
             updateTimerDisplay();
             document.getElementById('main-btn').innerText = "⮝";
             document.getElementById('main-btn').onclick = moveForward;
-            loadLevel(1);
+            document.getElementById('start-message').style.display = "none";
+            loadLevel(2);
             gameRunning = true;
             startTimer();
         }
@@ -1262,7 +1351,7 @@
 
         function moveForward() {
             if (!gameRunning || document.getElementById('tactical-overlay').style.display === "flex") return;
-            const {dx, dy} = dirOffsets(dir);
+            const { dx, dy } = dirOffsets(dir);
             let tx = px + dx, ty = py + dy;
             let targetTile = (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length) ? 1 : grid[ty][tx];
 
@@ -1361,6 +1450,19 @@
         /* --- RENDER LOGIC --- */
         function renderView() {
             document.getElementById('status').innerText = `${compassNames[dir]}`;
+
+            // show/hide warp indicators
+            const warpIndicator = document.getElementById('warp-indicator');
+            const warpBtn = document.getElementById('warp-btn');
+            if (gameRunning && isWarpCell(px, py)) {
+                warpIndicator.style.display = 'block';
+                warpBtn.style.display = 'inline-block';
+                document.getElementById('floor').style.backgroundColor = "#220066";
+            } else {
+                warpIndicator.style.display = 'none';
+                warpBtn.style.display = 'none';
+                document.getElementById('floor').style.backgroundColor = "#000";
+            }
 
             // symbol helper defined above
 
@@ -1464,7 +1566,7 @@
 
             const faceSeenIdx = faceSeen(dir);
 
-            const {dx:fdx, dy:fdy} = dirOffsets(dir);
+            const { dx: fdx, dy: fdy } = dirOffsets(dir);
             let tx = px + fdx, ty = py + fdy;
             let frontTile = (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length) ? 1 : grid[ty][tx];
             const frontEl = document.getElementById('front-wall');
@@ -1473,9 +1575,9 @@
             updateWallContent(frontEl, frontTile, faceSeenIdx);
 
             // --- SIDE WALLS VISIBILITY FIX ---
-            ['left','right'].forEach(side => {
+            ['left', 'right'].forEach(side => {
                 let d = side === 'left' ? (dir + 3) % 4 : (dir + 1) % 4;
-                const {dx:sdx, dy:sdy} = dirOffsets(d);
+                const { dx: sdx, dy: sdy } = dirOffsets(d);
                 let sx = px + sdx, sy = py + sdy;
                 let tile = (sy < 0 || sy >= grid.length || sx < 0 || sx >= grid[0].length) ? 1 : grid[sy][sx];
                 const wallEl = document.getElementById(`${side}-wall`);
@@ -1486,7 +1588,7 @@
             });
         }
         function checkWall(d) {
-            const {dx, dy} = dirOffsets(d);
+            const { dx, dy } = dirOffsets(d);
             let tx = px + dx, ty = py + dy;
             return (ty < 0 || ty >= grid.length || tx < 0 || tx >= grid[0].length ||
                 isSolidTile(grid[ty][tx]));
@@ -1848,6 +1950,14 @@
                         }
                         ctx.fillText(symbol, sx, sy);
                     }
+                    // draw warp marker if this square is part of a warp pair
+                    if (isWarpCell(x, y, lvl)) {
+                        ctx.fillStyle = "#ff0";
+                        ctx.font = "bold 24px Arial";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText("W", xp + ts / 2, yp + ts / 2);
+                    }
                 }
             }
 
@@ -1921,10 +2031,6 @@
             }, 50);
         }
     </script>
-    <script defer="defer" src="Nav%20Protocol_files/v8c78df7c7c0f484497ecbca7046644da1771523124516.es"
-        integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg=="
-        data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;e5631aad7be3443cba4a00112dc8643a&quot;,&quot;r&quot;:1,&quot;server_timing&quot;:{&quot;name&quot;:{&quot;cfCacheStatus&quot;:true,&quot;cfEdge&quot;:true,&quot;cfExtPri&quot;:true,&quot;cfL4&quot;:true,&quot;cfOrigin&quot;:true,&quot;cfSpeedBrain&quot;:true},&quot;location_startswith&quot;:null}}"
-        crossorigin="anonymous"></script>
 </body>
 
 </html>
