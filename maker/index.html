@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Nav Protocol Maker</title>
+    <style>
+        body {
+            background: #050505;
+            color: #0f0;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+        }
+
+        #grid {
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        #grid td {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #444;
+            text-align: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        #grid td.wall {
+            background: #222;
+        }
+
+        #grid td.path {
+            background: #000;
+            color: #0f0;
+        }
+
+        #grid td.start {
+            background: #0f0;
+            color: #000;
+        }
+
+        #grid td.exit {
+            background: #f00;
+            color: #fff;
+        }
+
+        #grid td.warp {
+            background: #00f;
+            color: #fff;
+        }
+
+        #controls {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button,
+        select,
+        input {
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 4px 6px;
+            font: inherit;
+        }
+
+        textarea {
+            width: 640px;
+            height: 150px;
+            margin-top: 10px;
+            background: #111;
+            color: #0f0;
+            border: 1px solid #0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Nav Protocol Maker</h1>
+    <div id="controls">
+        <label>Rows: <input id="rows" type="number" min="5" max="32" value="12" style="width:60px;"></label>
+        <label>Cols: <input id="cols" type="number" min="5" max="32" value="16" style="width:60px;"></label>
+        <button id="resizeBtn">Resize</button>
+    </div>
+    <div id="controls">
+        <label>Symbol: <select id="symbolType">
+                <option value="0">0 (empty)</option>
+                <option value="1">1 (wall)</option>
+                <option value="2">2 (start)</option>
+                <option value="3">3 (exit)</option>
+            </select></label>
+        <label>Dir: <select id="symbolDir">
+                <option value="">none</option>
+                <option value="N">N</option>
+                <option value="E">E</option>
+                <option value="S">S</option>
+                <option value="W">W</option>
+            </select></label>
+        <label><input id="isKey" type="checkbox"> key</label>
+        <label><input id="setWarp" type="checkbox"> warp tile</label>
+        <button id="tileBtn">Set Selected</button>
+        <span id="preview">Preview: 0</span>
+    </div>
+    <div id="controls">
+        <label>Start Dir: <select id="startDir">
+                <option value="N">N</option>
+                <option value="E">E</option>
+                <option value="S">S</option>
+                <option value="W">W</option>
+            </select></label>
+        <button id="clearBtn">Clear</button>
+    </div>
+    <table id="grid"></table>
+    <textarea id="mapData" placeholder="ここにJSONを貼り付けてロードできます"></textarea>
+    <div style="margin-top:8px; width:640px; display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
+        <button id="saveBtn">Local Save</button>
+        <button id="loadBtn">Load Local</button>
+        <button id="exportBtn">JSON Export</button>
+        <button id="savePlayable">Save Playable</button>
+    </div>
+    <script>
+        let ROWS = 12;
+        let COLS = 16;
+        const STORAGE_KEY = "navpro_map_maker";
+        const PLAYABLE_KEY = "navpro_maker_playable";
+        const gridEl = document.getElementById('grid');
+        const mapDataEl = document.getElementById('mapData');
+        const rowsInput = document.getElementById('rows');
+        const colsInput = document.getElementById('cols');
+
+        let map = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => 0));
+        let selected = { id: 0, dir: '', key: false, warp: false };
+
+        const characters = {
+            4: "🐄", 5: "🐿️", 6: "🐘", 7: "🐅", 8: "🐙", 9: "🃏",
+            10: "👺", 11: "↑", 12: "→", 13: "↓", 14: "←", 15: "👁️",
+            16: "☭", 17: "🐈", 18: "", 19: "", 20: "🐂",
+            21: "🐃", 22: "🦦", 23: "🦌", 24: "🇮🇩", 25: "🇯🇵",
+            26: "🇲🇨", 27: "🇧🇫", 28: "🇱🇸", 29: "🇰🇵"
+        };
+
+        Object.entries(characters).forEach(([id, chara]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.text = `${id} ${chara}`;
+            document.getElementById('symbolType').appendChild(option);
+        });
+
+        const updatePreview = () => {
+            let v = selected.id;
+            if (selected.id > 0 && selected.dir) v = `${selected.dir}${selected.id}`;
+            if (selected.key && typeof v === 'string' && !v.startsWith('K')) v = `K${v}`;
+            if (selected.warp) v = 'W';
+            document.getElementById('preview').innerText = `Preview: ${v}`;
+        };
+
+        const renderGrid = () => {
+            gridEl.innerHTML = "";
+            for (let y = 0; y < ROWS; y++) {
+                const row = document.createElement('tr');
+                for (let x = 0; x < COLS; x++) {
+                    const cell = document.createElement('td');
+                    const v = map[y][x];
+                    cell.dataset.x = x; cell.dataset.y = y;
+                    cell.innerText = v;
+                    if (v === 1) cell.className = 'wall';
+                    else if (v === 2) cell.className = 'start';
+                    else if (v === 3) cell.className = 'exit';
+                    else if (v === 'W') cell.className = 'warp';
+                    else cell.className = 'path';
+                    cell.onclick = () => {
+                        let v;
+                        if (document.getElementById('setWarp').checked) v = 'W';
+                        else {
+                            const id = Number(document.getElementById('symbolType').value);
+                            const dir = document.getElementById('symbolDir').value;
+                            const isKey = document.getElementById('isKey').checked;
+                            if (id <= 3) v = id;
+                            else {
+                                v = dir ? `${dir}${id}` : `${id}`;
+                                if (isKey) v = `K${v}`;
+                            }
+                        }
+                        map[y][x] = v;
+                        renderGrid();
+                    };
+                    row.appendChild(cell);
+                }
+                gridEl.appendChild(row);
+            }
+        };
+
+        const resizeGrid = () => {
+            ROWS = Number(rowsInput.value) || ROWS;
+            COLS = Number(colsInput.value) || COLS;
+            const newMap = Array.from({ length: ROWS }, (_, y) => Array.from({ length: COLS }, (_, x) => (map[y] && map[y][x] !== undefined) ? map[y][x] : 0));
+            map = newMap;
+            renderGrid();
+        };
+
+        document.getElementById('resizeBtn').onclick = resizeGrid;
+
+        document.getElementById('symbolType').onchange = updatePreview;
+        document.getElementById('symbolDir').onchange = updatePreview;
+        document.getElementById('isKey').onchange = updatePreview;
+        document.getElementById('setWarp').onchange = updatePreview;
+
+        document.getElementById('saveBtn').onclick = () => {
+            const s = JSON.stringify(map);
+            localStorage.setItem(STORAGE_KEY, s);
+            alert('Saved to localStorage');
+        };
+        document.getElementById('loadBtn').onclick = () => {
+            const s = localStorage.getItem(STORAGE_KEY);
+            if (!s) { alert('No saved map'); return; }
+            try { const loaded = JSON.parse(s); if (Array.isArray(loaded)) { map = loaded; renderGrid(); alert('Loaded'); } }
+            catch (e) { alert('読み込み失敗'); }
+        };
+        document.getElementById('clearBtn').onclick = () => {
+            map = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => 0)); renderGrid();
+        };
+        document.getElementById('exportBtn').onclick = () => mapDataEl.value = JSON.stringify({ map, startDir: document.getElementById('startDir').value, warps: [] }, null, 2);
+
+        document.getElementById('savePlayable').onclick = () => {
+            const startDir = document.getElementById('startDir').value;
+            const warps = [];
+            let warpCells = [];
+            map.forEach((row, y) => row.forEach((cell, x) => { if (cell === 'W') warpCells.push({ x, y }); }));
+            for (let i = 0; i < warpCells.length; i += 2) {
+                if (warpCells[i + 1]) warps.push([warpCells[i], warpCells[i + 1]]);
+            }
+            localStorage.setItem(PLAYABLE_KEY, JSON.stringify({ map, startDir, warps }));
+            alert('Saved playable map to localStorage');
+        };
+
+        mapDataEl.onchange = () => {
+            try {
+                const js = JSON.parse(mapDataEl.value);
+                if (Array.isArray(js.map || js)) {
+                    map = js.map || js;
+                    if (js.startDir) document.getElementById('startDir').value = js.startDir;
+                    ROWS = map.length;
+                    COLS = map[0].length;
+                    rowsInput.value = ROWS;
+                    colsInput.value = COLS;
+                    renderGrid();
+                }
+            } catch (e) { }
+        };
+
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try { const p = JSON.parse(stored); if (Array.isArray(p)) map = p; } catch (e) { }
+        }
+        updatePreview();
+        renderGrid();
+    </script>
+</body>
+
+</html>
