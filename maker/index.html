@@ -124,6 +124,9 @@
                 <option value="W">W</option>
             </select></label>
         <button id="clearBtn">Clear</button>
+        <label>Template: <select id="templateSelect">
+                <option value="">None</option>
+        </select></label>
     </div>
     <table id="grid"></table>
     <textarea id="mapData" placeholder="ここにJSONを貼り付けてロードできます"></textarea>
@@ -248,9 +251,11 @@
             alert('Saved playable map to localStorage');
         };
 
-        mapDataEl.onchange = () => {
+        mapDataEl.addEventListener('input', () => {
+            const value = mapDataEl.value.trim();
+            if (!value) return; // Do nothing if textarea is empty
             try {
-                const js = JSON.parse(mapDataEl.value);
+                const js = JSON.parse(value);
                 if (Array.isArray(js.map || js)) {
                     map = js.map || js;
                     if (js.startDir) document.getElementById('startDir').value = js.startDir;
@@ -260,8 +265,11 @@
                     colsInput.value = COLS;
                     renderGrid();
                 }
-            } catch (e) { }
-        };
+            } catch (e) {
+                console.error(e);
+                alert('Invalid JSON');
+            }
+        });
 
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -269,6 +277,44 @@
         }
         updatePreview();
         renderGrid();
+
+        fetch('../levels.json')
+            .then(response => response.json())
+            .then(data => {
+                const levels = Object.keys(data).map(k => data[k]);
+                for (let i = 0; i < levels.length; i++) {
+                    const stage = document.createElement('option');
+                    stage.value = i;
+                    stage.textContent = `Area ${i == 0 ? 'Secret' : i}`;
+                    document.getElementById('templateSelect').appendChild(stage);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to load levels.json:", err);
+            });
+        
+        document.getElementById('templateSelect').onchange = (e) => {
+            const levelId = e.target.value;
+            if (!levelId) return;
+            fetch('../levels.json')
+                .then(response => response.json())
+                .then(data => {
+                    const level = data[levelId];
+                    if (level && Array.isArray(level.map)) {
+                        map = level.map;
+                        document.getElementById('startDir').value = level.startDir || 'N';
+                        ROWS = map.length;
+                        COLS = map[0].length;
+                        rowsInput.value = ROWS;
+                        colsInput.value = COLS;
+                        renderGrid();
+                    }
+                })
+                .catch(err => {
+                    console.error("Failed to load levels.json:", err);
+                    alert('Failed to load template');
+                });
+        };
     </script>
 </body>
 
