@@ -5,6 +5,7 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
     <title>Nav Protocol</title>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.4.2/css/all.css">
 </head>
 
 <body id="main-body">
@@ -12,78 +13,74 @@
     <div id="meltdown-text">MELTDOWN</div>
     <div id="clang-text">CLANG!</div>
 
-    <div id="ui-wrapper">
-        <!-- <h2 id="title-header">ENGLISH ESCAPE</h2> -->
-        <div id="timer-box">TIME: <span id="clock">12:00</span></div>
-        <div id="status">NORTH</div>
-        <div style="margin:5px;">
-            <label style="font-size:12px; display:block; margin-bottom:2px;">MODE:</label>
-            <select id="start-mode" style="font-size:12px; padding:3px; margin-right:6px; width:130px;">
-                <option value="single">Current Stage Only</option>
-                <option value="sequence">Start From Beginning</option>
-            </select>
-            <select id="start-stage" style="font-size:12px; padding:3px; width:90px;">
-                <option value="#" selected disabled>Select Stage</option>
-            </select>
-        </div>
-        <!-- additional indicator shown when standing on a warp tile -->
-        <div id="warp-indicator" style="display:none; color:#0ff; font-weight:bold; margin:5px;">WARP</div>
-
-        <div id="game-container" class="walk-anim" style="border-color: rgb(68, 68, 68);">
-            <div id="start-message">
-                <p>Click START to begin</p>
+    <div id="ui-wrapper" class="ui-wrapper">
+        <div id="player-box">
+            <!-- <h2 id="title-header">ENGLISH ESCAPE</h2> -->
+            <div id="timer-box">TIME: <span id="clock">12:00</span></div>
+            <div id="status">NORTH</div>
+            <div style="margin:5px;">
+                <label style="font-size:12px; display:block; margin-bottom:2px;">MODE:</label>
+                <select id="start-mode" style="font-size:12px; padding:3px; margin-right:6px; width:130px;">
+                    <option value="single">Current Stage Only</option>
+                    <option value="sequence">Start From Beginning</option>
+                </select>
+                <select id="start-stage" style="font-size:12px; padding:3px; width:90px;">
+                    <option value="#" selected disabled>Select Stage</option>
+                </select>
             </div>
+            <!-- additional indicator shown when standing on a warp tile -->
+            <div id="warp-indicator" style="display:none; color:#0ff; font-weight:bold; margin:5px;">WARP</div>
 
-            <div id="escape-text">SURFACE REACHED</div>
+            <div id="game-container" class="walk-anim" style="border-color: rgb(68, 68, 68);">
+                <div id="start-message">
+                    <p>Click START to begin</p>
+                </div>
 
-            <div id="tactical-overlay" style="display: none;">
-                <h1 id="overlay-title">FINISHED</h1>
-                <p id="overlay-msg"></p>
-                <button id="overlay-btn" onclick="closeOverlay()">NEXT MAP</button>
-            </div>
-            <div id="persistent-key-hud" style="display: flex; box-shadow: none;">
-                <div class="hud-key-wrapper" style="opacity: 0.5;">
-                    <div class="hud-x-mark" style="transform: translateY(-50%) rotate(45deg);"></div>
-                    <div class="hud-x-mark" style="transform: translateY(-50%) rotate(-45deg);"></div>
+                <div id="escape-text">SURFACE REACHED</div>
+
+                <div id="tactical-overlay" style="display: none;">
+                    <h1 id="overlay-title">FINISHED</h1>
+                    <p id="overlay-msg"></p>
+                    <button id="overlay-btn" onclick="closeOverlay()">NEXT MAP</button>
+                </div>
+                <div id="persistent-key-hud" style="display: flex; box-shadow: none;">
+                    <div class="hud-key-wrapper" style="opacity: 0.5;">
+                        <div class="hud-x-mark" style="transform: translateY(-50%) rotate(45deg);"></div>
+                        <div class="hud-x-mark" style="transform: translateY(-50%) rotate(-45deg);"></div>
+                    </div>
+                </div>
+                <div id="door-left" class="door">
+                    <div class="handle"></div>
+                </div>
+                <div id="door-right" class="door">
+                    <div class="handle"></div>
+                </div>
+                <div id="floor"></div>
+                <div id="left-wall" class="wall" style="opacity: 1;">
+                    <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
+                </div>
+                <div id="right-wall" class="wall" style="opacity: 1;">
+                    <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
+                </div>
+                <div id="front-wall" class="wall" onclick="clickWall()" style="display: flex;">
+                    <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
                 </div>
             </div>
-            <div id="door-left" class="door">
-                <div class="handle"></div>
-            </div>
-            <div id="door-right" class="door">
-                <div class="handle"></div>
-            </div>
-            <div id="floor"></div>
-            <div id="left-wall" class="wall" style="opacity: 1;">
-                <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
-            </div>
-            <div id="right-wall" class="wall" style="opacity: 1;">
-                <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
-            </div>
-            <div id="front-wall" class="wall" onclick="clickWall()" style="display: flex;">
-                <div style="position: relative; display: inline-block;"><span class="symbol-flipper"></span></div>
-            </div>
-        </div>
 
-        <div class="controls">
-            <button class="nav-btn" onclick="turnLeft()">↺ L</button>
-            <button id="main-btn" onclick="initGame()">START</button>
-            <button class="nav-btn" onclick="turnRight()">R ↻</button>
-            <button id="warp-btn" onclick="performWarp()" style="display:none;">WARP</button>
-            <button id="cheat-btn" onclick="showCheatPosition()"
-                style="display:none; background:#440044; color:#fff;">CHEAT POS</button>
+            <div class="controls">
+                <button class="nav-btn" onclick="turnLeft()">↺ L</button>
+                <button id="main-btn" onclick="initGame()">START</button>
+                <button class="nav-btn" onclick="turnRight()">R ↻</button>
+                <button id="warp-btn" onclick="performWarp()" style="display:none;">WARP</button>
+                <button id="cheat-btn" onclick="showCheatPosition()"
+                    style="display:none; background:#440044; color:#fff;">CHEAT POS</button>
+            </div>
         </div>
 
         <div id="admin-box" class="admin-panel">
             <strong>MAPS:</strong>
-            <span id="map-button-container"><button class="map-btn"
-                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 1</button><button class="map-btn"
-                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 2</button><button class="map-btn"
-                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 3</button><button class="map-btn"
-                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 4</button><button class="map-btn"
-                    style="padding: 5px; font-size: 12px; margin: 0px 5px;">💾 SECRET</button></span>
-            <button id="open-maker" style="margin-left:10px; font-size:12px;">Open Maker</button>
-            <button id="import-maker-btn" style="margin-left:10px; font-size:12px;">Import Maker</button>
+            <span id="map-button-container">
+            </span>
         </div>
     </div>
 
@@ -646,14 +643,25 @@
         }
 
         .admin-panel {
+            display: flex;
+            flex-direction: column;
             margin-top: 15px;
             padding: 10px;
             border-top: 1px solid #333;
-            width: 100%;
+            width: fit-content;
             background: #111;
             font-size: 12px;
             transition: transform 4s, opacity 3s;
             color: #0f0;
+            gap: 10px;
+            height: 100%;
+        }
+
+        #map-button-container {
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            gap: 5px;
         }
 
         .shatter .admin-panel strong,
@@ -1008,6 +1016,11 @@
             color: #0f0;
             text-shadow: 0 0 10px #0f0;
         }
+
+        .ui-wrapper {
+            display: flex;
+            gap: 20px;
+        }
     </style>
 
     <script>
@@ -1221,8 +1234,8 @@
         }
 
         /* --- INITIALIZATION --- */
-        window.onload = () => {
-            generateMapButtons();
+        window.onload = () => async function () {
+            await generateMapButtons();
             initUI();
         };
 
@@ -1234,6 +1247,36 @@
                     cheat.style.display = 'inline-block';
                 }
             });
+        }
+
+        function generateMapButtons() {
+            const container = document.getElementById('map-button-container');
+            container.innerHTML = "";
+            let keys = Object.keys(levels);
+            // 並び順を数値順＋その他（例: tutorial, 0, 1, 2...）
+            keys = keys.sort((a, b) => {
+                if (!isNaN(a) && !isNaN(b)) return Number(a) - Number(b);
+                if (!isNaN(a)) return -1;
+                if (!isNaN(b)) return 1;
+                return a.localeCompare(b);
+            });
+            keys.forEach(lvl => {
+                const btn = document.createElement('button');
+                btn.className = "map-btn";
+                btn.style = "padding: 5px; font-size: 12px; margin: 0 5px;";
+                let displayLabel = lvl === "0" ? "SECRET" : `${lvl}`;
+                btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> ${displayLabel}`;
+                btn.onclick = () => downloadMap(lvl);
+                container.appendChild(btn);
+            });
+
+            const hr = document.createElement('hr');
+            hr.style = "width: 100%; border: 1px solid #333; margin: 10px 0;";
+            container.appendChild(hr);
+
+            container.insertAdjacentHTML('beforeend', `<button id="open-maker" style="padding: 5px; font-size: 12px; margin: 0 5px;"><i class="fa-solid fa-folder-open"></i> Open Maker</button>
+                <button id="import-maker-btn" style="padding: 5px; font-size: 12px; margin: 0 5px;"><i class="fa-solid fa-file-import"></i> Import Maker</button>`);
+
             const makerBtn = document.getElementById('open-maker');
             if (makerBtn) {
                 makerBtn.onclick = () => window.open('./maker/index.html', '_blank');
@@ -1259,28 +1302,6 @@
                     }
                 };
             }
-        }
-
-        function generateMapButtons() {
-            const container = document.getElementById('map-button-container');
-            container.innerHTML = "";
-            let keys = Object.keys(levels);
-            // 並び順を数値順＋その他（例: tutorial, 0, 1, 2...）
-            keys = keys.sort((a, b) => {
-                if (!isNaN(a) && !isNaN(b)) return Number(a) - Number(b);
-                if (!isNaN(a)) return -1;
-                if (!isNaN(b)) return 1;
-                return a.localeCompare(b);
-            });
-            keys.forEach(lvl => {
-                const btn = document.createElement('button');
-                btn.className = "map-btn";
-                btn.style = "padding: 5px; font-size: 12px; margin: 0 5px;";
-                let displayLabel = lvl === "0" ? "SECRET" : `${lvl}`;
-                btn.innerHTML = `💾 ${displayLabel}`;
-                btn.onclick = () => downloadMap(lvl);
-                container.appendChild(btn);
-            });
         }
 
         function initGame() {
