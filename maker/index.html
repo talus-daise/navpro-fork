@@ -149,20 +149,23 @@
         let map = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => 0));
         let selected = { id: 0, dir: '', key: false, warp: false };
 
-        const characters = {
-            4: "🐄", 5: "🐿️", 6: "🐘", 7: "🐅", 8: "🐙", 9: "🃏",
-            10: "👺", 11: "↑", 12: "→", 13: "↓", 14: "←", 15: "👁️",
-            16: "☭", 17: "🐈", 18: "", 19: "", 20: "🐂",
-            21: "🐃", 22: "🦦", 23: "🦌", 24: "🇮🇩", 25: "🇯🇵",
-            26: "🇲🇨", 27: "🇧🇫", 28: "🇱🇸", 29: "🇰🇵"
-        };
+        let characters = {};
+        fetch('../symbols.json')
+            .then(response => response.json())
+            .then(data => {
+                characters = data;
+                Object.entries(characters).forEach(([id, chara]) => {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.text = `${id} ${chara}`;
+                    document.getElementById('symbolType').appendChild(option);
+                });
+            })
+            .catch(err => {
+                console.error("Failed to load symbols.json:", err);
+                alert('Failed to load symbol data');
+            });
 
-        Object.entries(characters).forEach(([id, chara]) => {
-            const option = document.createElement('option');
-            option.value = id;
-            option.text = `${id} ${chara}`;
-            document.getElementById('symbolType').appendChild(option);
-        });
 
         const updatePreview = () => {
             let v = selected.id;

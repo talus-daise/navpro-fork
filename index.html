@@ -9,6 +9,26 @@
 </head>
 
 <body id="main-body">
+    <!-- 左下三ボタン -->
+    <button id="config-menu-btn"
+        style="position:fixed; left:18px; bottom:18px; z-index:1001; width:44px; height:44px; border-radius:12px; background:#222; color:#fff; border:none; font-size:28px; box-shadow:0 2px 8px #000a; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <span style="font-size:32px; line-height:1;">&#9776;</span>
+    </button>
+
+    <!-- Config画面モーダル -->
+    <div id="config-modal"
+        style="display:none; position:fixed; left:0; bottom:0; width:100vw; max-width:350px; height:auto; min-height:180px; background:#181818; color:#fff; border-radius:18px 18px 0 0; box-shadow:0 -2px 16px #000a; z-index:1002; padding:24px 24px 16px 24px;">
+        <h2 style="margin-top:0; font-size:20px;">Config</h2>
+        <div style="margin-bottom:18px;">
+            <label for="theme-select" style="font-size:15px;">テーマ選択:</label>
+            <select id="theme-select" style="font-size:15px; margin-left:10px;">
+                <option value="default">Default</option>
+                <option value="disco">Disco</option>
+                <option value="epilogue-theme">Epilogue</option>
+            </select>
+        </div>
+        <button id="close-config-btn" style="margin-top:10px; font-size:15px;">閉じる</button>
+    </div>
     <div id="explosion-layer"></div>
     <div id="meltdown-text">MELTDOWN</div>
     <div id="clang-text">CLANG!</div>
@@ -17,19 +37,18 @@
         <div id="player-box">
             <!-- <h2 id="title-header">ENGLISH ESCAPE</h2> -->
             <div id="timer-box">TIME: <span id="clock">12:00</span></div>
-            <div id="status">NORTH</div>
+            <div id="status">NORTH</div><span id="warp-indicator"
+                style="display:none; color:#0ff; font-weight:bold; margin:5px;"></span>
             <div style="margin:5px;">
                 <label style="font-size:12px; display:block; margin-bottom:2px;">MODE:</label>
-                <select id="start-mode" style="font-size:12px; padding:3px; margin-right:6px; width:130px;">
+                <select id="start-mode" style="font-size:12px; padding:3px; margin-right:6px; width:fit-content;">
                     <option value="single">Current Stage Only</option>
                     <option value="sequence">Start From Beginning</option>
                 </select>
-                <select id="start-stage" style="font-size:12px; padding:3px; width:90px;">
+                <select id="start-stage" style="font-size:12px; padding:3px; width:fit-content;">
                     <option value="#" selected disabled>Select Stage</option>
                 </select>
             </div>
-            <!-- additional indicator shown when standing on a warp tile -->
-            <div id="warp-indicator" style="display:none; color:#0ff; font-weight:bold; margin:5px;">WARP</div>
 
             <div id="game-container" class="walk-anim" style="border-color: rgb(68, 68, 68);">
                 <div id="start-message">
@@ -72,8 +91,6 @@
                 <button id="main-btn" onclick="initGame()">START</button>
                 <button class="nav-btn" onclick="turnRight()">R ↻</button>
                 <button id="warp-btn" onclick="performWarp()" style="display:none;">WARP</button>
-                <button id="cheat-btn" onclick="showCheatPosition()"
-                    style="display:none; background:#440044; color:#fff;">CHEAT POS</button>
             </div>
         </div>
 
@@ -90,14 +107,35 @@
 
 
     <style>
+        /* Config三ボタンとモーダルの追加スタイル */
+        #config-menu-btn:hover {
+            background: #333;
+        }
+
+        #config-modal {
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        #config-modal.open {
+            display: block !important;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #config-modal.closed {
+            display: none !important;
+            opacity: 0;
+            transform: translateY(100px);
+        }
+
         /* --- GLOBAL & WRAPPER --- */
         body {
             background-color: #050505;
             color: #0f0;
             font-family: 'Courier New', Courier, monospace;
             text-align: center;
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 1fr auto;
             align-items: center;
             margin: 0;
             height: 100vh;
@@ -612,9 +650,9 @@
         /* --- UI CONTROLS & ADMIN --- */
         .controls {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
             gap: 10px;
-            width: 350px;
+            width: 450px;
             margin-top: 10px;
         }
 
@@ -1020,6 +1058,8 @@
         .ui-wrapper {
             display: flex;
             gap: 20px;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 
@@ -1038,14 +1078,24 @@
         const compassNames = ["NORTH", "EAST", "SOUTH", "WEST"];
 
         /* --- HELPER TABLES & FUNCTIONS --- */
-        const SYMBOLS = {
+        let SYMBOLS = {
             4: "🐄", 5: "🐿️", 6: "🐘", 7: "🐅", 8: "🐙", 9: "🃏",
             10: "👺", 11: "↑", 12: "→", 13: "↓", 14: "←", 15: "👁️",
             16: "☭", 17: "🐈", 18: "", 19: "", 20: "🐂",
             21: "🐃", 22: "🦦", 23: "🦌", 24: "🇮🇩", 25: "🇯🇵",
             26: "🇲🇨", 27: "🇧🇫", 28: "🇱🇸", 29: "🇰🇵"
         };
-        const LARGE_IDS = new Set([9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
+        let LARGE_IDS = new Set([9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]);
+
+        fetch('./symbols.json')
+            .then(response => response.json())
+            .then(data => {
+                SYMBOLS = data;
+                LARGE_IDS = new Set(Object.keys(SYMBOLS).filter(id => id >= 10).map(Number));
+            })
+            .catch(err => {
+                console.error("Failed to load symbols.json:", err);
+            });
 
         let levels = {};
 
@@ -1126,6 +1176,7 @@
             const colors = ["#ff00ff", "#00ffff", "#ffd700", "#8a2be2", "#00ff00", "#ff4500"];
             for (let i = 0; i < level.warps.length; i++) {
                 const pair = level.warps[i];
+                if (!pair || !pair[0] || !pair[1]) continue;
                 if ((pair[0].x === x && pair[0].y === y) || (pair[1].x === x && pair[1].y === y)) {
                     return colors[i % colors.length];
                 }
@@ -1234,19 +1285,31 @@
         }
 
         /* --- INITIALIZATION --- */
-        window.onload = () => async function () {
-            await generateMapButtons();
+        window.onload = function () {
+            // Config三ボタンの開閉・テーマ切替
+            const configBtn = document.getElementById('config-menu-btn');
+            const configModal = document.getElementById('config-modal');
+            const closeConfigBtn = document.getElementById('close-config-btn');
+            const themeSelect = document.getElementById('theme-select');
+            configBtn.onclick = () => {
+                configModal.style.display = 'block';
+            };
+            closeConfigBtn.onclick = () => {
+                configModal.style.display = 'none';
+            };
+            themeSelect.onchange = (e) => {
+                document.body.classList.remove('disco', 'epilogue-theme');
+                if (e.target.value !== 'default') {
+                    document.body.classList.add(e.target.value);
+                }
+            };
+            generateMapButtons();
             initUI();
         };
 
         function initUI() {
+            const cheatBtn = document.getElementById('cheat-btn');
             document.getElementById('cheat-btn').style.display = 'none';
-            document.addEventListener('keydown', (e) => {
-                if (e.shiftKey && e.key.toUpperCase() === 'C') {
-                    const cheat = document.getElementById('cheat-btn');
-                    cheat.style.display = 'inline-block';
-                }
-            });
         }
 
         function generateMapButtons() {
@@ -1302,6 +1365,8 @@
                     }
                 };
             }
+
+            container.insertAdjacentHTML('beforeend', `<button id="cheat-btn" onclick="showCheatPosition()" style="display:none; background:#440044; padding: 5px; font-size: 12px; margin: 0 5px;">CHEAT POS</button>`);
         }
 
         function initGame() {
@@ -1326,13 +1391,161 @@
         }
 
         function showCheatPosition() {
-            if (!gameRunning) return;
-            const pos = `x=${px}, y=${py}, dir=${compassNames[dir]}, level=${currentLevel}`;
-            const status = document.getElementById('status');
-            status.innerText = `CHEAT: ${pos}`;
-            setTimeout(() => {
-                status.innerText = `${compassNames[dir]}`;
-            }, 2500);
+            // 右側にミニマップcanvasを表示
+            let minimap = document.getElementById('minimap-overlay');
+            if (!minimap) {
+                minimap = document.createElement('div');
+                minimap.id = 'minimap-overlay';
+                minimap.style.background = 'rgba(10,10,10,0.95)';
+                minimap.style.border = '2px solid #0f0';
+                minimap.style.borderRadius = '10px';
+                minimap.style.padding = '12px';
+                minimap.style.zIndex = 2000;
+                minimap.style.maxHeight = '80vh';
+                document.body.appendChild(minimap);
+            }
+            minimap.innerHTML = '';
+            // 閉じるボタン
+            const closeBtn = document.createElement('button');
+            closeBtn.innerText = '×';
+            closeBtn.style.position = 'absolute';
+            closeBtn.style.top = '5px';
+            closeBtn.style.right = '5px';
+            closeBtn.style.display = 'block';
+            closeBtn.onclick = () => minimap.remove();
+            minimap.appendChild(closeBtn);
+
+            // canvas生成
+            let canvas = document.getElementById('minimap-canvas');
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                canvas.id = 'minimap-canvas';
+                minimap.appendChild(canvas);
+            }
+            // サイズ計算
+            const cellSize = 22;
+            const margin = 10;
+            const w = grid[0].length * cellSize + margin * 2;
+            const h = grid.length * cellSize + margin * 2;
+            canvas.width = w;
+            canvas.height = h;
+            canvas.style.display = 'block';
+            canvas.style.background = 'rgba(0,0,0,0.2)';
+            canvas.style.borderRadius = '8px';
+
+            // 描画
+            const ctx = canvas.getContext('2d');
+            for (let y = 0; y < grid.length; y++) {
+                for (let x = 0; x < grid[y].length; x++) {
+                    let cell = grid[y][x];
+                    
+
+                    let xp = x * cellSize + margin;
+                    let yp = y * cellSize + margin;
+                    // 背景
+                    if (cell === 1) {
+                        ctx.fillStyle = '#222';
+                    } else if (cell === 0) {
+                        ctx.fillStyle = '#111';
+                    } else if (cell === 2) {
+                        ctx.fillStyle = '#0f0';
+                    } else if (cell === 3) {
+                        ctx.fillStyle = '#f00';
+                    } else if (typeof cell === 'string' || cell >= 4) {
+                        // キー/ランドマーク
+                        let parsed = typeof cell === 'string' ? parseTile(cell) : {};
+                        if (parsed.isKey) {
+                            if (collectedKeys.includes(parsed.keyName)) {
+                                ctx.fillStyle = '#444';
+                            } else {
+                                ctx.fillStyle = '#89CFF0';
+                            }
+                        } else {
+                            ctx.fillStyle = '#191';
+                        }
+                    } else {
+                        ctx.fillStyle = '#191';
+                    }
+                    ctx.fillRect(xp, yp, cellSize, cellSize);
+
+                    // ワープ
+                    if (isWarpCell(x, y, currentLevel)) {
+                        ctx.save();
+                        ctx.globalAlpha = 0.7;
+                        ctx.fillStyle = getWarpColor(x, y, currentLevel) || '#ff0';
+                        ctx.fillRect(xp, yp, cellSize, cellSize);
+                        ctx.restore();
+                    }
+
+                    // 枠線
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(xp, yp, cellSize, cellSize);
+
+                    // 絵文字・方向線＋背景枠線
+                    if (typeof cell === 'string' || cell >= 4) {
+                        let parsed = typeof cell === 'string' ? parseTile(cell) : {};
+                        let symbol = getSymbol(cell);
+
+                        // 背景
+                        ctx.fillStyle = '#222';
+                        ctx.fillRect(xp, yp, cellSize, cellSize);
+
+                        // 枠線（絵文字が表示されている側のみ）
+                        if (parsed.dir) {
+                            ctx.save();
+                            ctx.strokeStyle = parsed.isKey ? '#89CFF0' : '#0f0';
+                            ctx.lineWidth = 4;
+                            ctx.beginPath();
+                            if (parsed.dir === 'N') {
+                                ctx.moveTo(xp, yp);
+                                ctx.lineTo(xp + cellSize, yp);
+                            } else if (parsed.dir === 'S') {
+                                ctx.moveTo(xp, yp + cellSize);
+                                ctx.lineTo(xp + cellSize, yp + cellSize);
+                            } else if (parsed.dir === 'W') {
+                                ctx.moveTo(xp, yp);
+                                ctx.lineTo(xp, yp + cellSize);
+                            } else if (parsed.dir === 'E') {
+                                ctx.moveTo(xp + cellSize, yp);
+                                ctx.lineTo(xp + cellSize, yp + cellSize);
+                            }
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+
+                        // 絵文字
+                        ctx.font = '16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = parsed.isKey ? (collectedKeys.includes(parsed.keyName) ? '#aaa' : '#0055aa') : '#0f0';
+                        ctx.fillText(symbol, xp + cellSize / 2, yp + cellSize / 2);
+                    }
+                }
+            }
+            // 現在位置
+            ctx.save();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(px * cellSize + margin, py * cellSize + margin, cellSize, cellSize);
+            ctx.restore();
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const arrows = ['↑', '→', '↓', '←'];
+            ctx.fillText(arrows[dir], px * cellSize + margin + cellSize / 2, py * cellSize + margin + cellSize / 2);
+
+            // 座標・向き
+            const compass = ['NORTH', 'EAST', 'SOUTH', 'WEST'];
+            const info = document.createElement('div');
+            info.style.marginTop = '8px';
+            info.style.fontSize = '14px';
+            info.style.color = '#0f0';
+            info.innerHTML = `POS: (${px},${py})<br>DIR: ${compass[dir]}`;
+            minimap.appendChild(info);
+
+            document.addEventListener('keydown', showCheatPosition);
         }
 
         /* --- CORE SYSTEMS --- */
@@ -1520,6 +1733,7 @@
             // show/hide warp indicators
             const warpIndicator = document.getElementById('warp-indicator');
             const warpBtn = document.getElementById('warp-btn');
+            if (!warpIndicator || !warpBtn) return; // Prevent error if elements are missing
             if (gameRunning && isWarpCell(px, py)) {
                 warpIndicator.style.display = 'block';
                 warpBtn.style.display = 'inline-block';
@@ -1664,61 +1878,50 @@
             timerBox.classList.remove('critical-alert');
             statusText.classList.remove('critical-alert');
 
-            // --- LEVEL 0 SPECIAL ENDING ---
-            if (currentLevel === 0) {
+            const mode = document.getElementById('start-mode')?.value || 'single';
+            // --- sequenceモード: 連続クリアでエンディング ---
+            if (mode === 'sequence' && (!levels[nextLvl] || currentLevel === 0)) {
                 gameRunning = false;
                 clearInterval(timerInterval);
                 clearInterval(fireSpawnInterval);
-
-                // 1. Trigger the Disco Lights
+                // エンディング演出
                 const disco = document.getElementById('disco-overlay');
-                if (disco) {
-                    disco.classList.add('disco-active');
-                }
-
-                // Update Status
+                if (disco) disco.classList.add('disco-active');
                 statusText.innerText = "S Y S T E M   L I B E R A T E D";
                 statusText.style.color = "#fff";
                 statusText.style.textShadow = "0 0 20px #fff";
-
-                // Disable movement
                 document.querySelectorAll('button').forEach(btn => btn.disabled = true);
-
-                // Pop Confetti
-                for (let i = 0; i < 100; i++) {
-                    setTimeout(spawnConfetti, i * 20);
-                }
-
-                // Optional: Final message overlay after a delay
+                for (let i = 0; i < 100; i++) setTimeout(spawnConfetti, i * 20);
                 setTimeout(() => {
                     const escapeText = document.getElementById('escape-text');
                     escapeText.innerText = "ESCAPED";
                     escapeText.style.display = "block";
                     escapeText.style.color = "white";
                 }, 0);
-
-                return; // Stop here, don't look for next levels
+                return;
             }
-
-            // --- STANDARD WIN LOGIC ---
-            if (levels[nextLvl]) {
-                clearInterval(fireSpawnInterval);
-                const mode = document.getElementById('start-mode')?.value || 'single';
-                if (mode === 'sequence') {
-                    loadLevel(nextLvl);
-                    return;
-                }
-                const overlay = document.getElementById('tactical-overlay');
-                overlay.style.display = "flex";
-                document.getElementById('overlay-btn').onclick = () => {
-                    loadLevel(nextLvl);
-                    closeOverlay();
-                };
-            } else {
+            // --- singleモード: クリア後は再選択可能に ---
+            if (mode === 'single' || !levels[nextLvl]) {
+                gameRunning = false;
                 clearInterval(timerInterval);
                 clearInterval(fireSpawnInterval);
-                document.getElementById('admin-box').classList.add('dimmed');
-                triggerEscapeSequence();
+                for (let i = 0; i < 50; i++) setTimeout(spawnWindParticle, i * 50);
+                document.getElementById('admin-box').classList.remove('dimmed');
+                document.getElementById('start-message').style.display = "flex";
+                document.getElementById('main-btn').innerText = "START";
+                document.getElementById('main-btn').onclick = initGame;
+                document.getElementById('escape-text').innerText = "SURFACE REACHED";
+                document.getElementById('escape-text').style.display = "none";
+                // 風パーティクル演出
+                // UIリセット
+                // 必要なら他のUIも初期化
+                return;
+            }
+            // --- sequenceモード: 次のレベルへ ---
+            if (mode === 'sequence' && levels[nextLvl]) {
+                clearInterval(fireSpawnInterval);
+                loadLevel(nextLvl);
+                return;
             }
         }
 
@@ -1834,7 +2037,17 @@
                 rWall.style.removeProperty("opacity");
                 rWall.style.removeProperty("transition");
 
-                loadLevel(0);
+                const mode = document.getElementById('start-mode').value;
+                if (mode === 'sequence') {
+                    loadLevel(0);
+                } else {
+                    gameRunning = true;
+                    document.getElementById('start-message').style.display = "flex";
+                    document.getElementById('start-message').style.color = "#0ff";
+                    document.getElementById('main-btn').innerText = "RESTART";
+                    document.getElementById('main-btn').onclick = () => initGame();
+                    return;
+                }
 
                 // Re-enable UI
                 document.querySelectorAll('button').forEach(btn => btn.disabled = false);
@@ -2099,6 +2312,24 @@
                 isTransitioning = false;
             }, 50);
         }
+
+        document.getElementById('start-stage').onchange = function () {
+            initGame();
+            loadLevel(this.value);
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning) return;
+            if (document.getElementById('tactical-overlay').style.display === "flex") return;
+            if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') moveForward();
+            else if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') turnLeft();
+            else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') turnRight();
+            else if (e.key === 'Enter' || e.key === ' ') { clickWall(); performWarp(); }
+            else if (e.shiftKey && e.key.toUpperCase() === 'C') {
+                const cheat = document.getElementById('cheat-btn');
+                cheat.style.display = 'inline-block';
+            }
+        });
     </script>
 </body>
 

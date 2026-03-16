@@ -1,15 +1,10 @@
 {
     "tutorial": {
         "map": [
-            [
-                2,
-                3
-            ]
+            [2, 3]
         ],
         "startDir": "E",
-        "warps": [
-            []
-        ]
+        "warps": []
     },
     "Original 1": {
         "map": [
