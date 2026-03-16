@@ -19,6 +19,9 @@
     <div id="config-modal"
         style="display:none; position:fixed; left:0; bottom:0; width:100vw; max-width:350px; height:auto; min-height:180px; background:#181818; color:#fff; border-radius:18px 18px 0 0; box-shadow:0 -2px 16px #000a; z-index:1002; padding:24px 24px 16px 24px;">
         <h2 style="margin-top:0; font-size:20px;">Config</h2>
+        <div>
+            <label><input type="checkbox" name="mute" id="mute-checkbox"> Mute</label>
+        </div>
         <div style="margin-bottom:18px;">
             <label for="theme-select" style="font-size:15px;">テーマ選択:</label>
             <select id="theme-select" style="font-size:15px; margin-left:10px;">
@@ -1294,6 +1297,7 @@
             const configModal = document.getElementById('config-modal');
             const closeConfigBtn = document.getElementById('close-config-btn');
             const themeSelect = document.getElementById('theme-select');
+            const musicToggle = document.getElementById('mute-checkbox');
             configBtn.onclick = () => {
                 configModal.style.display = 'block';
             };
@@ -1304,6 +1308,13 @@
                 document.body.classList.remove('disco', 'epilogue-theme');
                 if (e.target.value !== 'default') {
                     document.body.classList.add(e.target.value);
+                }
+            };
+            musicToggle.onchange = (e) => {
+                if (e.target.checked) {
+                    audioPool.forEach(audio => audio.muted = true);
+                } else {
+                    audioPool.forEach(audio => audio.muted = false);
                 }
             };
             generateMapButtons();
@@ -2277,7 +2288,7 @@
         function initAudioSystem() {
             let current = audioPool[activeIndex];
             current.src = "intro.mp3";
-            current.volume = 1.0;
+            current.volume = 0.4;
             current.play();
 
             audioPool.forEach(player => {
