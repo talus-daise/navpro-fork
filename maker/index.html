@@ -103,7 +103,10 @@
                 <option value="1">1 (wall)</option>
                 <option value="2">2 (start)</option>
                 <option value="3">3 (exit)</option>
-            </select></label>
+                <option value="emoji">絵文字（自由入力）</option>
+            </select>
+            <input id="emojiInput" type="text" placeholder="絵文字を入力" style="display:none;width:60px;">
+        </label>
         <label>Dir: <select id="symbolDir">
                 <option value="">none</option>
                 <option value="N">N</option>
@@ -149,24 +152,6 @@
         let map = Array.from({ length: ROWS }, () => Array.from({ length: COLS }, () => 0));
         let selected = { id: 0, dir: '', key: false, warp: false };
 
-        let characters = {};
-        fetch('../symbols.json')
-            .then(response => response.json())
-            .then(data => {
-                characters = data;
-                Object.entries(characters).forEach(([id, chara]) => {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.text = `${id} ${chara}`;
-                    document.getElementById('symbolType').appendChild(option);
-                });
-            })
-            .catch(err => {
-                console.error("Failed to load symbols.json:", err);
-                alert('Failed to load symbol data');
-            });
-
-
         const updatePreview = () => {
             let v = selected.id;
             if (selected.id > 0 && selected.dir) v = `${selected.dir}${selected.id}`;
@@ -193,13 +178,20 @@
                         let v;
                         if (document.getElementById('setWarp').checked) v = 'W';
                         else {
-                            const id = Number(document.getElementById('symbolType').value);
+                            const symbolType = document.getElementById('symbolType').value;
                             const dir = document.getElementById('symbolDir').value;
                             const isKey = document.getElementById('isKey').checked;
-                            if (id <= 3) v = id;
-                            else {
-                                v = dir ? `${dir}${id}` : `${id}`;
+                            if (symbolType === 'emoji') {
+                                let emoji = document.getElementById('emojiInput').value;
+                                v = dir ? `${dir}${emoji}` : `${emoji}`;
                                 if (isKey) v = `K${v}`;
+                            } else {
+                                const id = Number(symbolType);
+                                if (id <= 3) v = id;
+                                else {
+                                    v = dir ? `${dir}${id}` : `${id}`;
+                                    if (isKey) v = `K${v}`;
+                                }
                             }
                         }
                         map[y][x] = v;
@@ -221,7 +213,24 @@
 
         document.getElementById('resizeBtn').onclick = resizeGrid;
 
-        document.getElementById('symbolType').onchange = updatePreview;
+        document.getElementById('symbolType').addEventListener('change', e => {
+            selected.id = e.target.value;
+            const emojiInput = document.getElementById('emojiInput');
+            if (e.target.value === 'emoji') {
+                emojiInput.style.display = 'inline-block';
+                selected.id = emojiInput.value;
+            } else {
+                emojiInput.style.display = 'none';
+            }
+            updatePreview();
+        });
+
+        document.getElementById('emojiInput').addEventListener('input', e => {
+            if (document.getElementById('symbolType').value === 'emoji') {
+                selected.id = e.target.value;
+                updatePreview();
+            }
+        });
         document.getElementById('symbolDir').onchange = updatePreview;
         document.getElementById('isKey').onchange = updatePreview;
         document.getElementById('setWarp').onchange = updatePreview;
@@ -250,6 +259,7 @@
             for (let i = 0; i < warpCells.length; i += 2) {
                 if (warpCells[i + 1]) warps.push([warpCells[i], warpCells[i + 1]]);
             }
+            // map配列の値をそのまま保存（KN🇵🇱等も保存される）
             localStorage.setItem(PLAYABLE_KEY, JSON.stringify({ map, startDir, warps }));
             alert('Saved playable map to localStorage');
         };
@@ -284,13 +294,13 @@
         fetch('../levels.json')
             .then(response => response.json())
             .then(data => {
-                const levels = Object.keys(data).map(k => data[k]);
-                for (let i = 0; i < levels.length; i++) {
-                    const stage = document.createElement('option');
-                    stage.value = i;
-                    stage.textContent = `Area ${i == 0 ? 'Secret' : i}`;
-                    document.getElementById('templateSelect').appendChild(stage);
-                }
+                const levels = Object.keys(data);
+                levels.forEach((level) => {
+                    const option = document.createElement('option');
+                    option.value = level;
+                    option.innerText = `Area ${level}`;
+                    document.getElementById('templateSelect').appendChild(option);
+                });
             })
             .catch(err => {
                 console.error("Failed to load levels.json:", err);

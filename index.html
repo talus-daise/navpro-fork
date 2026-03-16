@@ -1122,30 +1122,24 @@
         let timeLeft = 720, timerInterval, fireSpawnInterval;
 
         function parseTile(tile) {
-            let id = 0;
-            let dir = null;
-            let isKey = false;
-            let keyName = null;
-
+            // 0,1,2,3は従来通り
+            if (typeof tile === 'number') return { id: tile };
             if (typeof tile === 'string') {
-                isKey = /^K/i.test(tile);
-                const dirMatch = tile.match(/[NESW]/i);
-                if (dirMatch) dir = dirMatch[0].toUpperCase();
-
-                const idMatch = tile.match(/\d+/);
-                if (idMatch) {
-                    id = Number(idMatch[0]);
-                    if (isKey) keyName = idMatch[0];
+                // 例: KN🇵🇱 → key, dir=N, emoji=🇵🇱
+                let isKey = tile.startsWith('K');
+                let dir = null;
+                let emoji = null;
+                let keyName = null;
+                // K,方向,絵文字
+                let m = tile.match(/^K?([NESW])?(.+)$/);
+                if (m) {
+                    dir = m[1] || null;
+                    emoji = m[2] || null;
+                    keyName = isKey ? emoji : null;
                 }
-                if (isKey && !idMatch) {
-                    const nameMatch = tile.match(/^K([A-Za-z0-9_]+)/i);
-                    keyName = nameMatch ? nameMatch[1] : tile;
-                }
-                if (isKey && keyName === null) keyName = tile;
-            } else if (typeof tile === 'number') {
-                id = tile;
+                return { dir, isKey, emoji, keyName };
             }
-            return { id, dir, isKey, keyName };
+            return { id: tile };
         }
 
         // --- WARP UTILITIES ---
@@ -1195,13 +1189,22 @@
         }
 
         function getSymbol(val) {
-            const parsed = parseTile(val);
-            return SYMBOLS[parsed.id] || "";
+            // 0,1,2,3は従来通り
+            if (val === 0) return '';
+            if (val === 1) return '';
+            if (val === 2) return 'S';
+            if (val === 3) return 'E';
+            // それ以外はlevels.jsonの値をそのまま絵文字として表示
+            if (typeof val === 'string') {
+                // 例: "KN🇵🇱" → "🇵🇱"
+                const emojiMatch = val.replace(/^K?[NESW]?/, '');
+                return emojiMatch
+            }
+            return '';
         }
 
         function getSymbolData(val) {
-            const parsed = parseTile(val);
-            return { char: getSymbol(val), isLarge: LARGE_IDS.has(parsed.id) };
+            return { char: getSymbol(val), isLarge: false };
         }
 
         function dirOffsets(d) {
@@ -1221,7 +1224,7 @@
             if (typeof tile === 'string') {
                 const p = parseTile(tile);
                 if (p.isKey) return true;
-                if (p.id >= 4) return true;
+                if (p.emoji) return true;
                 if (tile === '2' || tile === '3') return tile === '3';
                 return false;
             }
@@ -1316,13 +1319,13 @@
             const container = document.getElementById('map-button-container');
             container.innerHTML = "";
             let keys = Object.keys(levels);
-            // 並び順を数値順＋その他（例: tutorial, 0, 1, 2...）
-            keys = keys.sort((a, b) => {
-                if (!isNaN(a) && !isNaN(b)) return Number(a) - Number(b);
-                if (!isNaN(a)) return -1;
-                if (!isNaN(b)) return 1;
-                return a.localeCompare(b);
-            });
+            // // 並び順を数値順＋その他（例: tutorial, 0, 1, 2...）
+            // keys = keys.sort((a, b) => {
+            //     if (!isNaN(a) && !isNaN(b)) return Number(a) - Number(b);
+            //     if (!isNaN(a)) return -1;
+            //     if (!isNaN(b)) return 1;
+            //     return a.localeCompare(b);
+            // });
             keys.forEach(lvl => {
                 const btn = document.createElement('button');
                 btn.className = "map-btn";
@@ -1402,6 +1405,7 @@
                 minimap.style.padding = '12px';
                 minimap.style.zIndex = 2000;
                 minimap.style.maxHeight = '80vh';
+                minimap.style.overflow = 'auto';
                 document.body.appendChild(minimap);
             }
             minimap.innerHTML = '';
